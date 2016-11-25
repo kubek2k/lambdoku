@@ -44,6 +44,10 @@ const extractDownstreamLambdas = function(config) {
     return configStringVal.length > 0 ? configStringVal.split(';') : [];
 };
 
+const publishFunction = function(lambdaName, description) {
+    child_process.execSync(`aws lambda publish-version --function-name ${lambdaName} --description \'${description}\'`);
+};
+
 commander
     .version('1.0')
     .option('-a, --lambda <lambdaName>', 'lambda to run operation on');
@@ -73,6 +77,7 @@ commander
         const config = getFunctionEnvVariables(lambdaName);
         config[envName] = envValue;
         setFunctionConfiguration(lambdaName, config);
+        publishFunction(lambdaName, `Set env variable ${envName}`);
     });
 
 commander
@@ -98,6 +103,7 @@ commander
         downstreamLambdas.push(downstreamLambdaName);
         config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
         setFunctionConfiguration(lambdaName, config);
+        publishFunction(lambdaName, `Added downstream ${downstreamLambdaName}`);
     });
 
 commander
@@ -110,6 +116,7 @@ commander
         downstreamLambdas.splice(downstreamLambdas.indexOf(downstreamLambdaName), 1);
         config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
         setFunctionConfiguration(lambdaName, config);
+        publishFunction(lambdaName, `Removed downstream ${downstreamLambdaName}`);
     });
 
 commander
