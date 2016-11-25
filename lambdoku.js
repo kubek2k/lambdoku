@@ -9,7 +9,7 @@ const errorHandler = function(err) {
     process.exit(1);
 };
 
-const getLambdaArn = function(commander) {
+const getLambdaName = function(commander) {
     if (commander.lambda) {
         return commander.lambda;
     }
@@ -20,16 +20,16 @@ const getLambdaArn = function(commander) {
     return lambdaArn;
 };
 
-const getFunctionEnvVariables = function(lambdaArn) {
-    const command = `aws lambda get-function-configuration --function-name ${lambdaArn}`;
+const getFunctionEnvVariables = function(lambdaName) {
+    const command = `aws lambda get-function-configuration --function-name ${lambdaName}`;
     return JSON.parse(child_process.execSync(command, {encoding: 'utf8'})).Environment.Variables;
 };
 
-const setFunctionConfiguration = function(lambdaArn, config) {
+const setFunctionConfiguration = function(lambdaName, config) {
     const jsonConfig = JSON.stringify({
         Variables: config
     });
-    const command = `aws lambda update-function-configuration --function-name ${lambdaArn} --environment \'${jsonConfig}\'`;
+    const command = `aws lambda update-function-configuration --function-name ${lambdaName} --environment \'${jsonConfig}\'`;
     child_process.execSync(command, {encoding: 'utf8'});
 };
 
@@ -40,22 +40,22 @@ const extractDownstreamLambdas = function(config) {
 
 commander
     .version('1.0')
-    .option('-a, --lambda <lambdaArn>', 'lambda to run operation on');
+    .option('-a, --lambda <lambdaName>', 'lambda to run operation on');
 
 commander
-    .command('init <lambdaArn>')
+    .command('init <lambdaName>')
     .description('init directory for use with lambda')
-    .action(function(lambdaArn) {
-        fs.writeFileSync(".lambdoku", lambdaArn, errorHandler);
+    .action(function(lambdaName) {
+        fs.writeFileSync(".lambdoku", lambdaName, errorHandler);
     });
 
 commander
     .command('config')
     .description('get env configuration for lambda')
     .action(function() {
-        const config = getFunctionEnvVariables(getLambdaArn(commander));
+        const config = getFunctionEnvVariables(getLambdaName(commander));
         for (const k in config) {
-            console.log(`${k}='${config[k]}'`)
+            console.log(`${k}='${config[k]}'`);
         }
     });
 
@@ -63,18 +63,17 @@ commander
     .command('config:set <envName> <envValue>')
     .description('set env configuration value of lambda')
     .action(function(envName, envValue) {
-        const lambdaArn = getLambdaArn(commander);
-        const config = getFunctionEnvVariables(lambdaArn);
+        const lambdaName = getLambdaName(commander);
+        const config = getFunctionEnvVariables(lambdaName);
         config[envName] = envValue;
-        setFunctionConfiguration(lambdaArn, config);
+        setFunctionConfiguration(lambdaName, config);
     });
 
 commander
     .command('config:get <envName>')
     .description('get env configuration value of lambda')
     .action(function(envName) {
-        const lambdaArn = getLambdaArn(commander);
-        const envValue = getFunctionEnvVariables(lambdaArn)[envName];
+        const envValue = getFunctionEnvVariables(getLambdaName(commander))[envName];
         if (envValue) {
             console.log(envValue);
         } else {
@@ -84,34 +83,34 @@ commander
     });
 
 commander
-    .command('downstream:add <downstreamLambdaArn>')
-    .description('add lambda ARN as downstream to given lambda')
-    .action(function(downstreamLambdaArn) {
-        const lambdaArn = getLambdaArn(commander);
-        const config = getFunctionEnvVariables(lambdaArn);
+    .command('downstream:add <downstreamLambdaName>')
+    .description('add downstream to given lambda')
+    .action(function(downstreamLambdaName) {
+        const lambdaName = getLambdaName(commander);
+        const config = getFunctionEnvVariables(lambdaName);
         const downstreamLambdas = extractDownstreamLambdas(config);
-        downstreamLambdas.push(downstreamLambdaArn);
+        downstreamLambdas.push(downstreamLambdaName);
         config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
-        setFunctionConfiguration(lambdaArn, config);
+        setFunctionConfiguration(lambdaName, config);
     });
 
 commander
-    .command('downstream:remove <downstreamLambdaArn>')
-    .description('remove lambda ARN from given lambda')
-    .action(function(downstreamLambdaArn) {
-        const lambdaArn = getLambdaArn(commander);
-        const config = getFunctionEnvVariables(lambdaArn);
+    .command('downstream:remove <downstreamLambdaName>')
+    .description('remove downstream from given lambda')
+    .action(function(downstreamLambdaName) {
+        const lambdaName = getLambdaName(commander);
+        const config = getFunctionEnvVariables(lambdaName);
         const downstreamLambdas = extractDownstreamLambdas(config);
-        downstreamLambdas.splice(downstreamLambdas.indexOf(downstreamLambdaArn), 1);
+        downstreamLambdas.splice(downstreamLambdas.indexOf(downstreamLambdaName), 1);
         config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
-        setFunctionConfiguration(lambdaArn, config);
+        setFunctionConfiguration(lambdaName, config);
     });
 
 commander
     .command('downstream')
     .description('get downstream lambdas of given lambda')
     .action(function() {
-        const lambdaArn = getLambdaArn(commander);
+        const lambdaArn = getLambdaName(commander);
         const config = getFunctionEnvVariables(lambdaArn);
         const downstreamLambdas = extractDownstreamLambdas(config);
         downstreamLambdas.forEach(function(lambdaArn) {
