@@ -1,0 +1,17 @@
+{
+  "name": "lambdoku",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jakub Janczak <kubek2k@gmail.com> (http://github.com/kubek2k)",
+  "license": "ISC",
+  "bin": {
+    "lambdoku": "./lambdoku.js"
+  },
+  "dependencies": {
+    "commander": "^2.9.0"
+  }
+}
