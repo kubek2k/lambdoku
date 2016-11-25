@@ -35,7 +35,7 @@ const setFunctionConfiguration = function(lambdaArn, config) {
 
 const extractDownstreamLambdas = function(config) {
     const configStringVal = config['DOWNSTREAM_LAMBDAS'] || '';
-    return configStringVal.length > 0 ? configStringVal.split(',') : [];
+    return configStringVal.length > 0 ? configStringVal.split(';') : [];
 };
 
 commander
@@ -91,7 +91,7 @@ commander
         const config = getFunctionEnvVariables(lambdaArn);
         const downstreamLambdas = extractDownstreamLambdas(config);
         downstreamLambdas.push(downstreamLambdaArn);
-        config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(',');
+        config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
         setFunctionConfiguration(lambdaArn, config);
     });
 
@@ -103,9 +103,10 @@ commander
         const config = getFunctionEnvVariables(lambdaArn);
         const downstreamLambdas = extractDownstreamLambdas(config);
         downstreamLambdas.splice(downstreamLambdas.indexOf(downstreamLambdaArn), 1);
-        config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(',');
+        config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
         setFunctionConfiguration(lambdaArn, config);
     });
+
 commander
     .command('downstream')
     .description('get downstream lambdas of given lambda')
@@ -117,6 +118,5 @@ commander
              console.log(lambdaArn);
         });
     });
-
 
 commander.parse(process.argv);
