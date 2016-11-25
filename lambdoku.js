@@ -69,8 +69,13 @@ commander
     .description('get env configuration value of lambda')
     .action(function(envName) {
         const lambdaArn = getLambdaArn(commander);
-        const config = getFunctionEnvVariables(lambdaArn);
-        console.log(config[envName]);
+        const envValue = getFunctionEnvVariables(lambdaArn)[envName];
+        if (envValue) {
+            console.log(envValue);
+        } else {
+            console.log(`No such env variable set ${envName}`);
+            process.exit(1);
+        }
     });
 
 
