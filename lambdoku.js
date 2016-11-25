@@ -20,7 +20,7 @@ const getLambdaArn = function(commander) {
     return lambdaArn;
 };
 
-const getFunctionConfiguration = function(lambdaArn) {
+const getFunctionEnvVariables = function(lambdaArn) {
     const command = `aws lambda get-function-configuration --function-name ${lambdaArn}`;
     return JSON.parse(child_process.execSync(command, {encoding: 'utf8'})).Environment.Variables;
 };
@@ -48,7 +48,7 @@ commander
     .command('config')
     .description('get env configuration for lambda')
     .action(function() {
-        const config = getFunctionConfiguration(getLambdaArn(commander));
+        const config = getFunctionEnvVariables(getLambdaArn(commander));
         for (const k in config) {
             console.log(`${k}='${config[k]}'`)
         }
@@ -56,12 +56,22 @@ commander
 
 commander
     .command('config:set <envName> <envValue>')
-    .description('set configuration value of lambda')
+    .description('set env configuration value of lambda')
     .action(function(envName, envValue) {
         const lambdaArn = getLambdaArn(commander);
-        const config = getFunctionConfiguration(lambdaArn);
+        const config = getFunctionEnvVariables(lambdaArn);
         config[envName] = envValue;
         setFunctionConfiguration(lambdaArn, config);
     });
+
+commander
+    .command('config:get <envName>')
+    .description('get env configuration value of lambda')
+    .action(function(envName) {
+        const lambdaArn = getLambdaArn(commander);
+        const config = getFunctionEnvVariables(lambdaArn);
+        console.log(config[envName]);
+    });
+
 
 commander.parse(process.argv);
