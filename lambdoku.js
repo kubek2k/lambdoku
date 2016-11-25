@@ -3,6 +3,7 @@
 const commander = require('commander');
 const fs = require('fs');
 const child_process = require('child_process');
+const http = require('https');
 
 const errorHandler = function(err) {
     console.log(err, err.stack);
@@ -31,6 +32,11 @@ const setFunctionConfiguration = function(lambdaName, config) {
     });
     const command = `aws lambda update-function-configuration --function-name ${lambdaName} --environment \'${jsonConfig}\'`;
     child_process.execSync(command, {encoding: 'utf8'});
+};
+
+const getFunctionCodeLocation = function(lambdaName) {
+    const command = `aws lambda get-function --function-name ${lambdaName}`;
+    return JSON.parse(child_process.execSync(command, {encoding: 'utf8'})).Code.Location;
 };
 
 const extractDownstreamLambdas = function(config) {
@@ -110,11 +116,32 @@ commander
     .command('downstream')
     .description('get downstream lambdas of given lambda')
     .action(function() {
-        const lambdaArn = getLambdaName(commander);
-        const config = getFunctionEnvVariables(lambdaArn);
+        const lambdaName = getLambdaName(commander);
+        const config = getFunctionEnvVariables(lambdaName);
         const downstreamLambdas = extractDownstreamLambdas(config);
-        downstreamLambdas.forEach(function(lambdaArn) {
-             console.log(lambdaArn);
+        downstreamLambdas.forEach(function(lambdaName) {
+            console.log(lambdaName);
+        });
+    });
+
+commander
+    .command('promote')
+    .description('promote lambda to all its downstreams')
+    .action(function() {
+        const lambdaName = getLambdaName(commander);
+        const functionCodeLocation = getFunctionCodeLocation(lambdaName);
+        const tempFileLocation = '/tmp/lambdoku-temp.zip';
+        const tempLambdaZipStream = fs.createWriteStream(tempFileLocation);
+        const request = http.get(functionCodeLocation, function(response) {
+            response.pipe(tempLambdaZipStream);
+            response.on('end', function() {
+                tempLambdaZipStream.end();
+                const downstreamLambdas = extractDownstreamLambdas(getFunctionEnvVariables(lambdaName));
+                downstreamLambdas.forEach(function(downstreamLambda) {
+                    child_process.execSync(`aws lambda update-function-code --publish ` +
+                        `--zip-file fileb://${tempFileLocation} --function-name ${downstreamLambda}`);
+                });
+            });
         });
     });
 
