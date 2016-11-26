@@ -19,9 +19,11 @@ const handle = function(fn) {
 
 const withMessage = function(message, fn) {
     process.stdout.write(message);
-    const result = fn();
-    process.stdout.write(`. ${chalk.green('\u2713')}\n`);
-    return result;
+    return fn()
+        .then(result => {
+            process.stdout.write(`. ${chalk.green('\u2713')}\n`);
+            return result;
+        });
 };
 
 const getLambdaName = function(commander) {
@@ -87,21 +89,19 @@ const getLambdaVersions = function(lambdaName) {
 };
 
 const downloadCode = function(codeLocation) {
-    return new Promise((resolve, reject) => {
+    return withMessage('Getting code of lambda', () => new Promise((resolve, reject) => {
         const tempDir = fs.mkdtempSync('/tmp/lambdoku-');
         const tempFileLocation = tempDir + 'lambdoku-temp.zip';
         const tempLambdaZipStream = fs.createWriteStream(tempFileLocation);
-        process.stdout.write('Getting code of lambda');
         http.get(codeLocation, function(response) {
             response.pipe(tempLambdaZipStream);
             response.on('end', function() {
                 tempLambdaZipStream.end();
-                process.stdout.write(`. ${chalk.green('\u2713')}\n`);
                 resolve(tempFileLocation);
             });
             response.on('error', (err) => reject(err));
         });
-    });
+    }));
 };
 
 commander
