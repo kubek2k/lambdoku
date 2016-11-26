@@ -5,9 +5,11 @@ const fs = require('fs');
 const child_process = require('child_process');
 const http = require('https');
 
-const errorHandler = function(err) {
-    console.log(err, err.stack);
-    process.exit(1);
+const withMessage = function(message, fn) {
+    process.stdout.write(message);
+    const result = fn();
+    process.stdout.write('. (done)\n');
+    return result;
 };
 
 const getLambdaName = function(commander) {
@@ -23,7 +25,9 @@ const getLambdaName = function(commander) {
 
 const getFunctionEnvVariables = function(lambdaName, version) {
     const command = `aws lambda get-function-configuration --function-name ${lambdaName} --qualifier \'${version}\'`;
-    return JSON.parse(child_process.execSync(command, {encoding: 'utf8'})).Environment.Variables;
+    return withMessage(`Getting function configuration of ${lambdaName}`, function() {
+        return JSON.parse(child_process.execSync(command, {encoding: 'utf8'})).Environment.Variables;
+    });
 };
 
 const setFunctionConfiguration = function(lambdaName, config) {
@@ -31,12 +35,16 @@ const setFunctionConfiguration = function(lambdaName, config) {
         Variables: config
     });
     const command = `aws lambda update-function-configuration --function-name ${lambdaName} --environment \'${jsonConfig}\'`;
-    child_process.execSync(command, {encoding: 'utf8'});
+    return withMessage(`Changing environment variables of ${lambdaName}`, function() {
+        return child_process.execSync(command, {encoding: 'utf8'});
+    });
 };
 
 const getFunctionCodeLocation = function(lambdaName, version) {
     const command = `aws lambda get-function --function-name ${lambdaName} --qualifier \'${version}\'`;
-    return JSON.parse(child_process.execSync(command, {encoding: 'utf8'})).Code.Location;
+    return withMessage(`Getting code location for ${lambdaName}`, function() {
+        return JSON.parse(child_process.execSync(command, {encoding: 'utf8'})).Code.Location;
+    });
 };
 
 const extractDownstreamLambdas = function(config) {
@@ -45,21 +53,27 @@ const extractDownstreamLambdas = function(config) {
 };
 
 const publishFunction = function(lambdaName, description) {
-    child_process.execSync(`aws lambda publish-version --function-name ${lambdaName} --description \'${description}\'`);
+    return withMessage(`Publishing new version of function ${lambdaName}`, function() {
+        return child_process.execSync(`aws lambda publish-version --function-name ${lambdaName} --description \'${description}\'`);
+    });
 };
 
 const updateFunctionCode = function(codeFileName, lambdaName, publish) {
-    child_process.execSync(`aws lambda update-function-code --zip-file fileb://${codeFileName} ` +
-        `--function-name ${lambdaName} ${publish ? '--publish' : ''}`);
+    return withMessage(`Updating function code for ${lambdaName}`, function() {
+        return child_process.execSync(`aws lambda update-function-code --zip-file fileb://${codeFileName} ` +
+            `--function-name ${lambdaName} ${publish ? '--publish' : ''}`);
+    });
 };
 
 const downloadCode = function(codeLocation, callback) {
     const tempFileLocation = '/tmp/lambdoku-temp.zip';
     const tempLambdaZipStream = fs.createWriteStream(tempFileLocation);
+    process.stdout.write('Getting code of lambda');
     const request = http.get(codeLocation, function(response) {
         response.pipe(tempLambdaZipStream);
         response.on('end', function() {
             tempLambdaZipStream.end();
+            process.stdout.write('. (done)\n');
             callback(tempFileLocation);
         });
     });
