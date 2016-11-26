@@ -202,4 +202,10 @@ commander
         });
     });
 
+commander
+    .command('*')
+    .action(function() {
+        commander.help();
+    });
+
 commander.parse(process.argv);
