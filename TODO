@@ -1,6 +1,6 @@
  * Write README.md
  * multi config set
- * config:unset
+ * verifying that we are actually publishing proper code with sha256
  * promisification of most of the things (including the execs)
  * better error handling
  * repair init(), and make it actually usable
