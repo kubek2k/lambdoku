@@ -100,6 +100,17 @@ commander
     });
 
 commander
+    .command('config:unset <envName>')
+    .description('unset env configuration value on lambda')
+    .action(function(envName) {
+        const lambdaName = getLambdaName(commander);
+        const config = getFunctionEnvVariables(lambdaName, '$LATEST');
+        delete config[envName];
+        setFunctionConfiguration(lambdaName, config);
+        publishFunction(lambdaName, `Unsetting env variable ${envName}`);
+    });
+
+commander
     .command('config:get <envName>')
     .description('get env configuration value of lambda')
     .action(function(envName) {
@@ -196,8 +207,7 @@ commander
         downloadCode(codeLocation, function(codeFileName) {
             child_process.execSync(`aws lambda update-function-code --zip-file fileb://${codeFileName} ` +
                 `--function-name ${lambdaName}`);
-            const envVariables = getFunctionEnvVariables(lambdaName, version);
-            setFunctionConfiguration(lambdaName, envVariables);
+            setFunctionConfiguration(lambdaName, getFunctionEnvVariables(lambdaName, version));
             publishFunction(lambdaName, `Rolling back to version ${version}`);
         });
     });
