@@ -105,6 +105,9 @@ commander
     .action(function(envName) {
         const lambdaName = getLambdaName(commander);
         const config = getFunctionEnvVariables(lambdaName, '$LATEST');
+        if (!config.hasOwnProperty(envName)) {
+            throw new Error(`No env variable ${envName} set on lambda ${lambdaName}`);
+        }
         delete config[envName];
         setFunctionConfiguration(lambdaName, config);
         publishFunction(lambdaName, `Unsetting env variable ${envName}`);
