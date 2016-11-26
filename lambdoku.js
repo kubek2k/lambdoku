@@ -152,4 +152,20 @@ commander
         });
     });
 
+commander
+    .command('releases')
+    .description('lists releases of lambda')
+    .action(function() {
+        const lambdaName = getLambdaName(commander);
+        const json = JSON.parse(child_process.execSync(`aws lambda list-versions-by-function --function-name ${lambdaName}`));
+        json.Versions
+            .reverse()
+            .filter(function(version) {
+                return version.Version !== '$LATEST';
+            })
+            .forEach(function(version) {
+                console.log(`${version.Version} | ${version.Description} | ${version.LastModified}`);
+            });
+    });
+
 commander.parse(process.argv);
