@@ -21,8 +21,8 @@ const getLambdaName = function(commander) {
     return lambdaArn;
 };
 
-const getFunctionEnvVariables = function(lambdaName) {
-    const command = `aws lambda get-function-configuration --function-name ${lambdaName}`;
+const getFunctionEnvVariables = function(lambdaName, version) {
+    const command = `aws lambda get-function-configuration --function-name ${lambdaName} --qualifier \'${version}\'`;
     return JSON.parse(child_process.execSync(command, {encoding: 'utf8'})).Environment.Variables;
 };
 
@@ -34,8 +34,8 @@ const setFunctionConfiguration = function(lambdaName, config) {
     child_process.execSync(command, {encoding: 'utf8'});
 };
 
-const getFunctionCodeLocation = function(lambdaName) {
-    const command = `aws lambda get-function --function-name ${lambdaName}`;
+const getFunctionCodeLocation = function(lambdaName, version) {
+    const command = `aws lambda get-function --function-name ${lambdaName} --qualifier \'${version}\'`;
     return JSON.parse(child_process.execSync(command, {encoding: 'utf8'})).Code.Location;
 };
 
@@ -46,6 +46,18 @@ const extractDownstreamLambdas = function(config) {
 
 const publishFunction = function(lambdaName, description) {
     child_process.execSync(`aws lambda publish-version --function-name ${lambdaName} --description \'${description}\'`);
+};
+
+const downloadCode = function(codeLocation, callback) {
+    const tempFileLocation = '/tmp/lambdoku-temp.zip';
+    const tempLambdaZipStream = fs.createWriteStream(tempFileLocation);
+    const request = http.get(codeLocation, function(response) {
+        response.pipe(tempLambdaZipStream);
+        response.on('end', function() {
+            tempLambdaZipStream.end();
+            callback(tempFileLocation);
+        });
+    });
 };
 
 commander
@@ -63,7 +75,7 @@ commander
     .command('config')
     .description('get env configuration for lambda')
     .action(function() {
-        const config = getFunctionEnvVariables(getLambdaName(commander));
+        const config = getFunctionEnvVariables(getLambdaName(commander), '$LATEST');
         for (const k in config) {
             console.log(`${k}='${config[k]}'`);
         }
@@ -74,7 +86,7 @@ commander
     .description('set env configuration value of lambda')
     .action(function(envName, envValue) {
         const lambdaName = getLambdaName(commander);
-        const config = getFunctionEnvVariables(lambdaName);
+        const config = getFunctionEnvVariables(lambdaName, '$LATEST');
         config[envName] = envValue;
         setFunctionConfiguration(lambdaName, config);
         publishFunction(lambdaName, `Set env variable ${envName}`);
@@ -84,7 +96,7 @@ commander
     .command('config:get <envName>')
     .description('get env configuration value of lambda')
     .action(function(envName) {
-        const envValue = getFunctionEnvVariables(getLambdaName(commander))[envName];
+        const envValue = getFunctionEnvVariables(getLambdaName(commander), '$LATEST')[envName];
         if (envValue) {
             console.log(envValue);
         } else {
@@ -98,7 +110,7 @@ commander
     .description('add downstream to given lambda')
     .action(function(downstreamLambdaName) {
         const lambdaName = getLambdaName(commander);
-        const config = getFunctionEnvVariables(lambdaName);
+        const config = getFunctionEnvVariables(lambdaName, '$LATEST');
         const downstreamLambdas = extractDownstreamLambdas(config);
         downstreamLambdas.push(downstreamLambdaName);
         config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
@@ -111,7 +123,7 @@ commander
     .description('remove downstream from given lambda')
     .action(function(downstreamLambdaName) {
         const lambdaName = getLambdaName(commander);
-        const config = getFunctionEnvVariables(lambdaName);
+        const config = getFunctionEnvVariables(lambdaName, '$LATEST');
         const downstreamLambdas = extractDownstreamLambdas(config);
         downstreamLambdas.splice(downstreamLambdas.indexOf(downstreamLambdaName), 1);
         config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
@@ -124,7 +136,7 @@ commander
     .description('get downstream lambdas of given lambda')
     .action(function() {
         const lambdaName = getLambdaName(commander);
-        const config = getFunctionEnvVariables(lambdaName);
+        const config = getFunctionEnvVariables(lambdaName, '$LATEST');
         const downstreamLambdas = extractDownstreamLambdas(config);
         downstreamLambdas.forEach(function(lambdaName) {
             console.log(lambdaName);
@@ -132,18 +144,18 @@ commander
     });
 
 commander
-    .command('promote')
+    .command('downstream:promote')
     .description('promote lambda to all its downstreams')
     .action(function() {
         const lambdaName = getLambdaName(commander);
-        const functionCodeLocation = getFunctionCodeLocation(lambdaName);
+        const functionCodeLocation = getFunctionCodeLocation(lambdaName, '$LATEST');
         const tempFileLocation = '/tmp/lambdoku-temp.zip';
         const tempLambdaZipStream = fs.createWriteStream(tempFileLocation);
-        const request = http.get(functionCodeLocation, function(response) {
+        http.get(functionCodeLocation, function(response) {
             response.pipe(tempLambdaZipStream);
             response.on('end', function() {
                 tempLambdaZipStream.end();
-                const downstreamLambdas = extractDownstreamLambdas(getFunctionEnvVariables(lambdaName));
+                const downstreamLambdas = extractDownstreamLambdas(getFunctionEnvVariables(lambdaName, '$LATEST'));
                 downstreamLambdas.forEach(function(downstreamLambda) {
                     child_process.execSync(`aws lambda update-function-code --publish ` +
                         `--zip-file fileb://${tempFileLocation} --function-name ${downstreamLambda}`);
@@ -166,6 +178,21 @@ commander
             .forEach(function(version) {
                 console.log(`${version.Version} | ${version.Description} | ${version.LastModified}`);
             });
+    });
+
+commander
+    .command('releases:rollback <version>')
+    .description('rolls back to given version of lambda')
+    .action(function(version) {
+        const lambdaName = getLambdaName(commander);
+        const codeLocation = getFunctionCodeLocation(lambdaName, version);
+        downloadCode(codeLocation, function(codeFileName) {
+            child_process.execSync(`aws lambda update-function-code --zip-file fileb://${codeFileName} ` +
+                `--function-name ${lambdaName}`);
+            const envVariables = getFunctionEnvVariables(lambdaName, version);
+            setFunctionConfiguration(lambdaName, envVariables);
+            publishFunction(lambdaName, `Rolling back to version ${version}`);
+        });
     });
 
 commander.parse(process.argv);
