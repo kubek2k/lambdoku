@@ -96,21 +96,21 @@ commander
 commander
     .command('help')
     .description('shows help')
-    .action(function() {
+    .action(() => {
         commander.help();
     });
 
 commander
     .command('init <lambdaName>')
     .description('init directory for use with lambda')
-    .action(function(lambdaName) {
+    .action(lambdaName => {
         fs.writeFileSync(".lambdoku", lambdaName, {encoding: 'utf8'});
     });
 
 commander
     .command('config')
     .description('get env configuration for lambda')
-    .action(function() {
+    .action(() => {
         const config = getFunctionEnvVariables(getLambdaName(commander), '$LATEST');
         for (const k in config) {
             console.log(`${k}='${config[k]}'`);
@@ -120,11 +120,11 @@ commander
 commander
     .command('config:unset <envName> [envName1...]')
     .description('unset env configuration value on lambda')
-    .action(function(envName, otherEnvNames) {
+    .action((envName, otherEnvNames) => {
         const lambdaName = getLambdaName(commander);
         const envs = getFunctionEnvVariables(lambdaName, '$LATEST');
         const envVarsToUnset = otherEnvNames.concat(envName)
-        envVarsToUnset.forEach(function(envName) {
+        envVarsToUnset.forEach(envName => {
             if (!envs.hasOwnProperty(envName)) {
                 throw new Error(`No env variable ${envName} set on lambda ${lambdaName}`);
             }
@@ -137,10 +137,10 @@ commander
 commander
     .command('config:set <envName=envValue> [envName1=envValue1...]')
     .description('set env configuration value of lambda')
-    .action(function(assignment1, otherAssignments) {
+    .action((assignment1, otherAssignments) => {
         const lambdaName = getLambdaName(commander);
         const assignments = otherAssignments.concat(assignment1)
-            .reduce(function(acc, assignment) {
+            .reduce((acc, assignment) => {
                 const splitted = assignment.split('=');
                 if (splitted.length != 2) {
                     throw new Error(`Assignment ${assignment} in wrong form. Should be envName='envValue'.`);
@@ -156,10 +156,10 @@ commander
 commander
     .command('config:get <envName> [envName1...]')
     .description('get env configuration value of lambda')
-    .action(function(envName1, otherEnvNames) {
+    .action((envName1, otherEnvNames) => {
         const envVariables = getFunctionEnvVariables(getLambdaName(commander), '$LATEST');
         const envs = otherEnvNames.concat(envName1)
-            .reduce(function(acc, envName) {
+            .reduce((acc, envName) => {
                 const envValue = envVariables[envName];
                 if (envValue) {
                     acc[envName] = envValue;
@@ -180,7 +180,7 @@ commander
         const lambdaName = getLambdaName(commander);
         const config = getFunctionEnvVariables(lambdaName, '$LATEST');
         const downstreamLambdas = extractDownstreamLambdas(config);
-        downstreamLambdas.forEach(function(lambdaName) {
+        downstreamLambdas.forEach(lambdaName => {
             console.log(lambdaName);
         });
     });
@@ -201,7 +201,7 @@ commander
 commander
     .command('downstream:remove <downstreamLambdaName>')
     .description('remove downstream from given lambda')
-    .action(function(downstreamLambdaName) {
+    .action(downstreamLambdaName => {
         const lambdaName = getLambdaName(commander);
         const config = getFunctionEnvVariables(lambdaName, '$LATEST');
         const downstreamLambdas = extractDownstreamLambdas(config);
@@ -219,12 +219,12 @@ commander
         const functionCodeLocation = getFunctionCodeLocation(lambdaName, '$LATEST');
         const tempFileLocation = '/tmp/lambdoku-temp.zip';
         const tempLambdaZipStream = fs.createWriteStream(tempFileLocation);
-        http.get(functionCodeLocation, function(response) {
+        http.get(functionCodeLocation, response => {
             response.pipe(tempLambdaZipStream);
-            response.on('end', function() {
+            response.on('end', () => {
                 tempLambdaZipStream.end();
                 const downstreamLambdas = extractDownstreamLambdas(getFunctionEnvVariables(lambdaName, '$LATEST'));
-                downstreamLambdas.forEach(function(downstreamLambda) {
+                downstreamLambdas.forEach(downstreamLambda => {
                     updateFunctionCode(tempFileLocation, downstreamLambda, true);
                 });
             });
@@ -236,10 +236,10 @@ commander
     .action(function() {
         const versions = getLambdaVersions(getLambdaName(commander));
         versions.reverse()
-            .filter(function(version) {
+            .filter(version => {
                 return version.Version !== '$LATEST';
             })
-            .forEach(function(version) {
+            .forEach(version => {
                 console.log(`${chalk.green(version.Version)} | ` +
                     `${version.Description} | ` +
                     `${chalk.red(version.LastModified)}`);
@@ -248,10 +248,10 @@ commander
 commander
     .command('releases:rollback <version>')
     .description('rolls back to given version of lambda')
-    .action(function(version) {
+    .action((version) => {
         const lambdaName = getLambdaName(commander);
         const codeLocation = getFunctionCodeLocation(lambdaName, version);
-        downloadCode(codeLocation, function(codeFileName) {
+        downloadCode(codeLocation, codeFileName => {
             updateFunctionCode(codeFileName, lambdaName, false);
             setFunctionConfiguration(lambdaName, getFunctionEnvVariables(lambdaName, version));
             publishFunction(lambdaName, `Rolling back to version ${version}`);
@@ -260,7 +260,7 @@ commander
 
 commander
     .command('*')
-    .action(function() {
+    .action(() => {
         commander.help();
     });
 
