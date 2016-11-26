@@ -41,7 +41,10 @@ const getFunctionEnvVariables = function(lambdaName, version) {
     return withMessage(`Getting function configuration of ${chalk.blue(lambdaName)}`, function() {
         const command = `aws lambda get-function-configuration --function-name ${lambdaName} --qualifier \'${version}\'`;
         return exec(command, {encoding: 'utf8'})
-            .then(res => JSON.parse(res.stdout).Environment.Variables);
+            .then(res => {
+                const parsed = JSON.parse(res.stdout);
+                return parsed.Environment ? parsed.Environment.Variables : {};
+            });
     });
 };
 
