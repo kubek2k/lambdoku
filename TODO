@@ -1,3 +1,4 @@
+ * Write README.md
  * multi config set
  * config:unset
  * promisification of most of the things (including the execs)
