@@ -1,6 +1,6 @@
 # Lambdoku
 
-Heroku-like expirience with AWS Lambdas.
+Heroku-like experience with AWS Lambdas.
 
 ## Features
 
