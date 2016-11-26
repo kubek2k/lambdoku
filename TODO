@@ -3,6 +3,5 @@
  * verifying that we are actually publishing proper code with sha256
  * promisification of most of the things (including the execs)
  * better error handling
- * repair init(), and make it actually usable
  * colorful output
  * (someday) use AWS SDK instead of command line tooling

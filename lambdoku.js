@@ -14,11 +14,11 @@ const getLambdaName = function(commander) {
     if (commander.lambda) {
         return commander.lambda;
     }
-    const lambdaArn = fs.readFileSync('.lambdoku', {encoding: 'utf8'});
-    if (!lambdaArn) {
-        throw new Error('No lambda as option or in .lambdoku file');
+    try {
+        return fs.readFileSync('.lambdoku', {encoding: 'utf8'});
+    } catch (err) {
+        throw new Error('No lambda name param passed and reading .lambdoku file failed. Did you run \'lambdoku init\'?');
     }
-    return lambdaArn;
 };
 
 const getFunctionEnvVariables = function(lambdaName, version) {
