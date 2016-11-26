@@ -106,6 +106,18 @@ commander
     });
 
 commander
+    .command('downstream')
+    .description('get downstream lambdas of given lambda')
+    .action(function() {
+        const lambdaName = getLambdaName(commander);
+        const config = getFunctionEnvVariables(lambdaName, '$LATEST');
+        const downstreamLambdas = extractDownstreamLambdas(config);
+        downstreamLambdas.forEach(function(lambdaName) {
+            console.log(lambdaName);
+        });
+    });
+
+commander
     .command('downstream:add <downstreamLambdaName>')
     .description('add downstream to given lambda')
     .action(function(downstreamLambdaName) {
@@ -129,18 +141,6 @@ commander
         config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
         setFunctionConfiguration(lambdaName, config);
         publishFunction(lambdaName, `Removed downstream ${downstreamLambdaName}`);
-    });
-
-commander
-    .command('downstream')
-    .description('get downstream lambdas of given lambda')
-    .action(function() {
-        const lambdaName = getLambdaName(commander);
-        const config = getFunctionEnvVariables(lambdaName, '$LATEST');
-        const downstreamLambdas = extractDownstreamLambdas(config);
-        downstreamLambdas.forEach(function(lambdaName) {
-            console.log(lambdaName);
-        });
     });
 
 commander
