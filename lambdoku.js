@@ -77,10 +77,9 @@ const publishFunction = function(lambdaName, description) {
     });
 };
 
-const updateFunctionCode = function(codeFileName, lambdaName, publish) {
+const updateFunctionCode = function(codeFileName, lambdaName) {
     return withMessage(`Updating function code for ${chalk.blue(lambdaName)}`, function() {
-        return exec(`aws lambda update-function-code --zip-file fileb://${codeFileName} ` +
-            `--function-name ${lambdaName} ${publish ? '--publish' : ''}`);
+        return exec(`aws lambda update-function-code --zip-file fileb://${codeFileName} --function-name ${lambdaName}`);
     });
 };
 
@@ -257,7 +256,9 @@ commander
                     .then(extractDownstreamLambdas)
                     .then(downstreamLambdas => {
                         return Promise.all(downstreamLambdas.map(downstreamLambda =>
-                            updateFunctionCode(codeFileName, downstreamLambda, true)));
+                            updateFunctionCode(codeFileName, downstreamLambda)
+                                .then(() => publishFunction(downstreamLambda, `Promoting code from ${lambdaName}`))));
+
                     });
             });
     }));
@@ -287,7 +288,7 @@ commander
         const lambdaName = getLambdaName(commander);
         return getFunctionCodeLocation(lambdaName, version)
             .then(codeLocation => downloadCode(codeLocation))
-            .then(codeFileName => updateFunctionCode(codeFileName, lambdaName, false))
+            .then(codeFileName => updateFunctionCode(codeFileName, lambdaName))
             .then(() => getFunctionEnvVariables(lambdaName, version))
             .then(config => setFunctionConfiguration(lambdaName, config))
             .then(() => publishFunction(lambdaName, `Rolling back to version ${version}`));
