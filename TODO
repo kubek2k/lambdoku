@@ -1,5 +1,4 @@
  * Write README.md
  * verifying that we are actually publishing proper code with sha256
- * promisification of most of the things (including the execs)
- * better error handling
  * (someday) use AWS SDK instead of command line tooling
+ * cleaning up temporary files
