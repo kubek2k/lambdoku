@@ -48,6 +48,11 @@ const publishFunction = function(lambdaName, description) {
     child_process.execSync(`aws lambda publish-version --function-name ${lambdaName} --description \'${description}\'`);
 };
 
+const updateFunctionCode = function(codeFileName, lambdaName, publish) {
+    child_process.execSync(`aws lambda update-function-code --zip-file fileb://${codeFileName} ` +
+        `--function-name ${lambdaName} ${publish ? '--publish' : ''}`);
+};
+
 const downloadCode = function(codeLocation, callback) {
     const tempFileLocation = '/tmp/lambdoku-temp.zip';
     const tempLambdaZipStream = fs.createWriteStream(tempFileLocation);
@@ -196,8 +201,7 @@ commander
                 tempLambdaZipStream.end();
                 const downstreamLambdas = extractDownstreamLambdas(getFunctionEnvVariables(lambdaName, '$LATEST'));
                 downstreamLambdas.forEach(function(downstreamLambda) {
-                    child_process.execSync(`aws lambda update-function-code --publish ` +
-                        `--zip-file fileb://${tempFileLocation} --function-name ${downstreamLambda}`);
+                    updateFunctionCode(tempFileLocation, downstreamLambda, true);
                 });
             });
         });
@@ -218,7 +222,6 @@ commander
                 console.log(`${version.Version} | ${version.Description} | ${version.LastModified}`);
             });
     });
-
 commander
     .command('releases:rollback <version>')
     .description('rolls back to given version of lambda')
@@ -226,8 +229,7 @@ commander
         const lambdaName = getLambdaName(commander);
         const codeLocation = getFunctionCodeLocation(lambdaName, version);
         downloadCode(codeLocation, function(codeFileName) {
-            child_process.execSync(`aws lambda update-function-code --zip-file fileb://${codeFileName} ` +
-                `--function-name ${lambdaName}`);
+            updateFunctionCode(codeFileName, lambdaName, false);
             setFunctionConfiguration(lambdaName, getFunctionEnvVariables(lambdaName, version));
             publishFunction(lambdaName, `Rolling back to version ${version}`);
         });
