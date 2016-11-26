@@ -83,11 +83,21 @@ const updateFunctionCode = function(codeFileName, lambdaName) {
     });
 };
 
-const getLambdaVersions = function(lambdaName) {
+const getFunctionVersions = function(lambdaName) {
     return withMessage(`Getting versions of ${chalk.blue(lambdaName)}`, function() {
         return exec(`aws lambda list-versions-by-function --function-name ${lambdaName}`)
             .then(res => JSON.parse(res.stdout).Versions);
     });
+};
+
+const getFunctionLatestPublishedVersion = function(lambdaName) {
+    return getFunctionVersions(lambdaName)
+        .then(versions => {
+            return versions
+                .map(v => v.Version)
+                .filter(v => v !== '$LATEST')
+                .reverse()[0];
+        });
 };
 
 const downloadCode = function(codeLocation) {
@@ -249,16 +259,20 @@ commander
     .description('promote lambda to all its downstreams')
     .action(handle(() => {
         const lambdaName = getLambdaName(commander);
-        return getFunctionCodeLocation(lambdaName, '$LATEST')
-            .then(functionCodeLocation => downloadCode(functionCodeLocation))
-            .then(codeFileName => {
-                return getFunctionEnvVariables(lambdaName, '$LATEST')
-                    .then(extractDownstreamLambdas)
-                    .then(downstreamLambdas => {
-                        return Promise.all(downstreamLambdas.map(downstreamLambda =>
-                            updateFunctionCode(codeFileName, downstreamLambda)
-                                .then(() => publishFunction(downstreamLambda, `Promoting code from ${lambdaName}`))));
+        return getFunctionLatestPublishedVersion(lambdaName)
+            .then(version => {
+                return getFunctionCodeLocation(lambdaName, version)
+                    .then(functionCodeLocation => downloadCode(functionCodeLocation))
+                    .then(codeFileName => {
+                        return getFunctionEnvVariables(lambdaName, version)
+                            .then(extractDownstreamLambdas)
+                            .then(downstreamLambdas => {
+                                return Promise.all(downstreamLambdas.map(downstreamLambda =>
+                                    updateFunctionCode(codeFileName, downstreamLambda)
+                                        .then(() => publishFunction(downstreamLambda,
+                                            `Promoting code from ${lambdaName} version ${version}`))));
 
+                            });
                     });
             });
     }));
@@ -267,7 +281,7 @@ commander
     .command('releases')
     .description('lists releases of lambda')
     .action(handle(() => {
-        return getLambdaVersions(getLambdaName(commander))
+        return getFunctionVersions(getLambdaName(commander))
             .then(versions => {
                 versions.reverse()
                     .filter(version => {
