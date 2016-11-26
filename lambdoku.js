@@ -66,6 +66,12 @@ const updateFunctionCode = function(codeFileName, lambdaName, publish) {
     });
 };
 
+const getLambdaVersions = function(lambdaName) {
+    return withMessage(`Getting versions of ${chalk.blue(lambdaName)}`, function() {
+        return JSON.parse(child_process.execSync(`aws lambda list-versions-by-function --function-name ${lambdaName}`)).Versions;
+    });
+};
+
 const downloadCode = function(codeLocation, callback) {
     const tempDir = fs.mkdtempSync('/tmp/lambdoku-');
     const tempFileLocation = tempDir + 'lambdoku-temp.zip';
@@ -224,16 +230,12 @@ commander
             });
         });
     });
-
 commander
     .command('releases')
     .description('lists releases of lambda')
     .action(function() {
-        const lambdaName = getLambdaName(commander);
-        const json = JSON.parse(child_process.execSync(`aws lambda list-versions-by-function --function-name ${lambdaName}`));
-        console.log(`Releases of ${chalk.blue(lambdaName)}:`);
-        json.Versions
-            .reverse()
+        const versions = getLambdaVersions(getLambdaName(commander));
+        versions.reverse()
             .filter(function(version) {
                 return version.Version !== '$LATEST';
             })
