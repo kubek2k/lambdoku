@@ -125,15 +125,22 @@ commander
     });
 
 commander
-    .command('config:get <envName>')
+    .command('config:get <envName> [envName1...]')
     .description('get env configuration value of lambda')
-    .action(function(envName) {
-        const envValue = getFunctionEnvVariables(getLambdaName(commander), '$LATEST')[envName];
-        if (envValue) {
-            console.log(envValue);
-        } else {
-            console.log(`No such env variable set ${envName}`);
-            process.exit(1);
+    .action(function(envName1, otherEnvNames) {
+        const envVariables = getFunctionEnvVariables(getLambdaName(commander), '$LATEST');
+        const envs = otherEnvNames.concat(envName1)
+            .reduce(function(acc, envName) {
+                const envValue = envVariables[envName];
+                if (envValue) {
+                    acc[envName] = envValue;
+                } else {
+                    throw new Error(`No such env variable set ${envName}`);
+                }
+                return acc;
+            }, {});
+        for (k in envs) {
+            console.log(`${k}=\'${envs[k]}\'`)
         }
     });
 
