@@ -68,7 +68,7 @@ commander
     .command('help')
     .description('shows help')
     .action(function() {
-       commander.help();
+        commander.help();
     });
 
 commander
@@ -89,17 +89,6 @@ commander
     });
 
 commander
-    .command('config:set <envName> <envValue>')
-    .description('set env configuration value of lambda')
-    .action(function(envName, envValue) {
-        const lambdaName = getLambdaName(commander);
-        const config = getFunctionEnvVariables(lambdaName, '$LATEST');
-        config[envName] = envValue;
-        setFunctionConfiguration(lambdaName, config);
-        publishFunction(lambdaName, `Set env variable ${envName}`);
-    });
-
-commander
     .command('config:unset <envName>')
     .description('unset env configuration value on lambda')
     .action(function(envName) {
@@ -111,6 +100,25 @@ commander
         delete config[envName];
         setFunctionConfiguration(lambdaName, config);
         publishFunction(lambdaName, `Unsetting env variable ${envName}`);
+    });
+
+commander
+    .command('config:set <envName=envValue> [envName1=envValue1...]')
+    .description('set env configuration value of lambda')
+    .action(function(assignment1, otherAssignments) {
+        const lambdaName = getLambdaName(commander);
+        const assignments = [assignment1].concat(otherAssignments)
+            .reduce(function(acc, assignment) {
+                const splitted = assignment.split('=');
+                if (splitted.length != 2) {
+                    throw new Error(`Assignment ${assignment} in wrong form. Should be envName='envValue'.`);
+                }
+                acc[splitted[0]] = splitted[1];
+                return acc;
+            }, {});
+        const newEnv = Object.assign({}, getFunctionEnvVariables(lambdaName, '$LATEST'), assignments);
+        setFunctionConfiguration(lambdaName, newEnv);
+        publishFunction(lambdaName, `Set env variables ${Object.keys(assignments)}`);
     });
 
 commander
