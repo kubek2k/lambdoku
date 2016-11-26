@@ -52,18 +52,20 @@ in the example :point_up: both code and configuration is rolled back from versio
 (actually the main reason why lambdoku was created)
 
 ```
-$ lambdoku downstream:add sampleDownstreamLambda1
+$ lambdoku init lambdaDev
 
-$ lambdoku downstream:add sampleDownstreamLambda2
+$ lambdoku downstream:add lambdaStage
+
+$ lambdoku downstream:add lambdaProd -a lambdaStage
 
 $ lambdoku downstream
-sampleDownstreamLambda1
-sampleDownstreamLambda2
+lambdaStage
 
 $ lambdoku downstream:promote
 ```
 
-now both downstream lambdas have code copied from current lambda.
+now `lambdaDev` and `lambdaStage` have the same codebase. 
+`lambdaStage` can be promoted to `lambdaProd` with command `lambdoku downstream:promote -a lambdaStage`.
 
 ## Installation
 
