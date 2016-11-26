@@ -89,16 +89,19 @@ commander
     });
 
 commander
-    .command('config:unset <envName>')
+    .command('config:unset <envName> [envName1...]')
     .description('unset env configuration value on lambda')
-    .action(function(envName) {
+    .action(function(envName, otherEnvNames) {
         const lambdaName = getLambdaName(commander);
-        const config = getFunctionEnvVariables(lambdaName, '$LATEST');
-        if (!config.hasOwnProperty(envName)) {
-            throw new Error(`No env variable ${envName} set on lambda ${lambdaName}`);
-        }
-        delete config[envName];
-        setFunctionConfiguration(lambdaName, config);
+        const envs = getFunctionEnvVariables(lambdaName, '$LATEST');
+        const envVarsToUnset = otherEnvNames.concat(envName)
+        envVarsToUnset.forEach(function(envName) {
+            if (!envs.hasOwnProperty(envName)) {
+                throw new Error(`No env variable ${envName} set on lambda ${lambdaName}`);
+            }
+            delete envs[envName];
+        });
+        setFunctionConfiguration(lambdaName, envs);
         publishFunction(lambdaName, `Unsetting env variable ${envName}`);
     });
 
@@ -107,7 +110,7 @@ commander
     .description('set env configuration value of lambda')
     .action(function(assignment1, otherAssignments) {
         const lambdaName = getLambdaName(commander);
-        const assignments = [assignment1].concat(otherAssignments)
+        const assignments = otherAssignments.concat(assignment1)
             .reduce(function(acc, assignment) {
                 const splitted = assignment.split('=');
                 if (splitted.length != 2) {
