@@ -75,7 +75,7 @@ commander
     .command('init <lambdaName>')
     .description('init directory for use with lambda')
     .action(function(lambdaName) {
-        fs.writeFileSync(".lambdoku", lambdaName, errorHandler);
+        fs.writeFileSync(".lambdoku", lambdaName, {encoding: 'utf8'});
     });
 
 commander
