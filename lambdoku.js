@@ -65,6 +65,13 @@ commander
     .option('-a, --lambda <lambdaName>', 'lambda to run operation on');
 
 commander
+    .command('help')
+    .description('shows help')
+    .action(function() {
+       commander.help();
+    });
+
+commander
     .command('init <lambdaName>')
     .description('init directory for use with lambda')
     .action(function(lambdaName) {
