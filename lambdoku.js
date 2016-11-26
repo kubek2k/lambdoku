@@ -66,7 +66,8 @@ const updateFunctionCode = function(codeFileName, lambdaName, publish) {
 };
 
 const downloadCode = function(codeLocation, callback) {
-    const tempFileLocation = '/tmp/lambdoku-temp.zip';
+    const tempDir = fs.mkdtempSync('/tmp/lambdoku-');
+    const tempFileLocation = tempDir + 'lambdoku-temp.zip';
     const tempLambdaZipStream = fs.createWriteStream(tempFileLocation);
     process.stdout.write('Getting code of lambda');
     const request = http.get(codeLocation, function(response) {
@@ -75,6 +76,8 @@ const downloadCode = function(codeLocation, callback) {
             tempLambdaZipStream.end();
             process.stdout.write('. (done)\n');
             callback(tempFileLocation);
+            fs.unlinkSync(tempFileLocation);
+            fs.unlinkSync(tempDir);
         });
     });
 };
