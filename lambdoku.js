@@ -7,6 +7,7 @@ const fs = require('fs');
 const exec = require('child-process-promise').exec;
 const http = require('https');
 const chalk = require('chalk');
+const Lambda = require('aws-sdk-promise').Lambda;
 
 const handle = function(fn) {
     return function() {
@@ -63,53 +64,69 @@ const withMessage = function(message, fn, verbose) {
         });
 };
 
-const AWSLambda = function(lambdaArn, verbose) {
-
-    const lambda = {
+const AWSLambdaClient = function(lambdaArn, verbose) {
+    const lambda = new Lambda({region: process.env.AWS_DEFAULT_REGION});
+    const client = {
         getFunctionEnvVariables: function(version) {
-            return withMessage(`Getting function configuration of ${chalk.blue(lambdaArn)}`, function() {
-                const command = `aws lambda get-function-configuration --function-name \'${lambdaArn}\' --qualifier \'${version}\'`;
-                return exec(command, {encoding: 'utf8'})
-                    .then(res => {
-                        const parsed = JSON.parse(res.stdout);
-                        return parsed.Environment ? parsed.Environment.Variables : {};
-                    }, verbose);
-            });
+            return withMessage(`Getting function configuration of ${chalk.blue(lambdaArn)}`,
+                () =>
+                    lambda.getFunctionConfiguration({
+                        FunctionName: lambdaArn,
+                        Qualifier: version
+                    }).promise()
+                        .then(res => res.data.Environment ? res.data.Environment.Variables : {}),
+                verbose);
         },
         setFunctionConfiguration: function(config) {
-            return withMessage(`Changing environment variables of ${chalk.blue(lambdaArn)}`, function() {
-                const jsonConfig = JSON.stringify({
-                    Variables: config
-                });
-                const command = `aws lambda update-function-configuration --function-name \'${lambdaArn}\' --environment \'${jsonConfig}\'`;
-                return exec(command, {encoding: 'utf8'});
-            }, verbose);
+            return withMessage(`Changing environment variables of ${chalk.blue(lambdaArn)}`,
+                () =>
+                    lambda.updateFunctionConfiguration({
+                        FunctionName: lambdaArn,
+                        Environment: {
+                            Variables: config
+                        }
+                    }).promise()
+                , verbose);
         },
         getFunctionCodeLocation: function(version) {
-            return withMessage(`Getting code location for ${chalk.blue(lambdaArn)}`, function() {
-                const command = `aws lambda get-function --function-name \'${lambdaArn}\' --qualifier \'${version}\'`;
-                return exec(command, {encoding: 'utf8'})
-                    .then(res => JSON.parse(res.stdout).Code.Location);
-            }, verbose);
+            return withMessage(`Getting code location for ${chalk.blue(lambdaArn)}`,
+                () =>
+                    lambda.getFunction({
+                        FunctionName: lambdaArn,
+                        Qualifier: version
+                    }).promise()
+                        .then(res => res.data.Code.Location)
+                , verbose);
         },
         publishFunction: function(description) {
-            return withMessage(`Publishing new version of function ${chalk.blue(lambdaArn)}`, function() {
-                return exec(`aws lambda publish-version --function-name \'${lambdaArn}\' --description \'${description}\'`);
-            }, verbose);
+            return withMessage(`Publishing new version of function ${chalk.blue(lambdaArn)}`,
+                () =>
+                    lambda.publishVersion({
+                        FunctionName: lambdaArn,
+                        Description: description
+                    }).promise()
+                , verbose);
         },
         updateFunctionCode: function(codeFileName) {
-            return withMessage(`Updating function code for ${chalk.blue(lambdaArn)}`, function() {
-                return exec(`aws lambda update-function-code --zip-file fileb://${codeFileName} --function-name \'${lambdaArn}\'`);
-            }, verbose);
+            return withMessage(`Updating function code for ${chalk.blue(lambdaArn)}`,
+                () =>
+                    lambda.updateFunctionCode({
+                        FunctionName: lambdaArn,
+                        ZipFile: fs.readFileSync(codeFileName)
+                    }).promise()
+                , verbose);
         },
         getFunctionVersions: function() {
-            return withMessage(`Getting versions of ${chalk.blue(lambdaArn)}`, function() {
-                return exec(`aws lambda list-versions-by-function --function-name \'${lambdaArn}\'`)
-                    .then(res => JSON.parse(res.stdout).Versions);
-            }, verbose);
+            return withMessage(`Getting versions of ${chalk.blue(lambdaArn)}`,
+                () =>
+                    lambda.listVersionsByFunction({
+                        FunctionName: lambdaArn
+                    }).promise()
+                        .then(res => res.data.Versions)
+                , verbose);
         },
         getFunctionLatestPublishedVersion: function() {
-            return lambda.getFunctionVersions(lambdaArn)
+            return client.getFunctionVersions(lambdaArn)
                 .then(versions => {
                     return versions
                         .map(v => v.Version)
@@ -118,11 +135,11 @@ const AWSLambda = function(lambdaArn, verbose) {
                 });
         }
     };
-    return lambda;
+    return client;
 };
 
 const createCommandLineLambda = function(commander) {
-    return AWSLambda(getLambdaName(commander), commander.verbose);
+    return AWSLambdaClient(getLambdaName(commander), commander.verbose);
 };
 
 commander
@@ -285,7 +302,7 @@ commander
                             .then(downstreamLambdas => {
                                 return Promise.all(
                                     downstreamLambdas
-                                        .map(downstreamLambda => AWSLambda(downstreamLambda, commander.verbose))
+                                        .map(downstreamLambda => AWSLambdaClient(downstreamLambda, commander.verbose))
                                         .map(lambda => lambda.updateFunctionCode(codeFileName)
                                             .then(() => lambda.publishFunction(`Promoting code from ${lambdaName} version ${version}`))));
                             });

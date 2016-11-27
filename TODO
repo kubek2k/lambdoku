@@ -1,3 +1,2 @@
  * verifying that we are actually publishing proper code with sha256
- * (someday) use AWS SDK instead of command line tooling
  * cleaning up temporary files
