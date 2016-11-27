@@ -313,7 +313,7 @@ commander
 
 commander
     .command('rollback <version>')
-    .command('releases:rollback')
+    .alias('releases:rollback')
     .description('rolls back to given version of lambda')
     .action(handle((version) => {
         const lambda = createCommandLineLambda(commander);
