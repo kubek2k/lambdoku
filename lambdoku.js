@@ -31,7 +31,7 @@ const getLambdaName = function(commander) {
         return commander.lambda;
     }
     try {
-        return fs.readFileSync('.lambdoku', {encoding: 'utf8'});
+        return fs.readFileSync('.lambdoku', {encoding: 'utf8'}).trim();
     } catch (err) {
         throw new Error('No lambda name param passed and reading .lambdoku file failed. Did you run \'lambdoku init\'?');
     }
