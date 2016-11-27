@@ -6,7 +6,7 @@ Heroku-like experience with AWS Lambdas.
 
 ### Connecting current directory with lambda (like `heroku git:remote`)
 
-```
+```shell
 $ lambdoku init someLambda
 ```
 
@@ -15,7 +15,7 @@ this allows you to omit the `-a` param for all commands below
 
 ### Simplified environment variables management (`heroku config`)
 
-```
+```shell
 $ lambdoku config:set ONE=1 TWO=2
 
 $ lambdoku config
@@ -28,7 +28,7 @@ ONE='1'
 
 ### Simplified releases management (`heroku releases`)
 
-```
+```shell
 $ lambdoku releases
 22 | Setting env variables AA | 2016-11-26T21:12:46.894+0000
 21 | Unsetting env variables XY | 2016-11-26T21:10:04.302+0000
@@ -51,7 +51,7 @@ in the example :point_up: both code and configuration is rolled back from versio
 
 (actually the main reason why lambdoku was created)
 
-```
+```shell
 $ lambdoku init lambdaDev
 
 $ lambdoku downstream:add lambdaStage
@@ -70,7 +70,7 @@ now `lambdaDev` and `lambdaStage` have the same codebase.
 ## Installation
 
 Simply:
-```
+```shell
 npm install -g lambdoku
 ```
 
