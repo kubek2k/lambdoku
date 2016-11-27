@@ -35,7 +35,7 @@ $ lambdoku releases
 20 | Setting env variables BB,XY | 2016-11-26T20:57:57.340+0000
 ...
 
-$ lambdoku releases:rollback 18
+$ lambdoku rollback 18
 
 $ lambdoku releases
 23 | Rolling back to version 18 | 2016-11-26T21:35:45.952+0000
@@ -54,14 +54,14 @@ in the example :point_up: both code and configuration is rolled back from versio
 ```shell
 $ lambdoku init lambdaDev
 
-$ lambdoku downstream:add lambdaStage
+$ lambdoku pipeline:add lambdaStage
 
-$ lambdoku downstream:add lambdaProd -a lambdaStage
+$ lambdoku pipeline:add lambdaProd -a lambdaStage
 
-$ lambdoku downstream
+$ lambdoku pipeline
 lambdaStage
 
-$ lambdoku downstream:promote
+$ lambdoku pipeline:promote
 ```
 
 now `lambdaDev` and `lambdaStage` have the same codebase. 
