@@ -39,7 +39,7 @@ const getLambdaName = function(commander) {
 
 const getFunctionEnvVariables = function(lambdaName, version) {
     return withMessage(`Getting function configuration of ${chalk.blue(lambdaName)}`, function() {
-        const command = `aws lambda get-function-configuration --function-name ${lambdaName} --qualifier \'${version}\'`;
+        const command = `aws lambda get-function-configuration --function-name \'${lambdaName}\' --qualifier \'${version}\'`;
         return exec(command, {encoding: 'utf8'})
             .then(res => {
                 const parsed = JSON.parse(res.stdout);
@@ -53,14 +53,14 @@ const setFunctionConfiguration = function(lambdaName, config) {
         const jsonConfig = JSON.stringify({
             Variables: config
         });
-        const command = `aws lambda update-function-configuration --function-name ${lambdaName} --environment \'${jsonConfig}\'`;
+        const command = `aws lambda update-function-configuration --function-name \'${lambdaName}\' --environment \'${jsonConfig}\'`;
         return exec(command, {encoding: 'utf8'});
     });
 };
 
 const getFunctionCodeLocation = function(lambdaName, version) {
     return withMessage(`Getting code location for ${chalk.blue(lambdaName)}`, function() {
-        const command = `aws lambda get-function --function-name ${lambdaName} --qualifier \'${version}\'`;
+        const command = `aws lambda get-function --function-name \'${lambdaName}\' --qualifier \'${version}\'`;
         return exec(command, {encoding: 'utf8'})
             .then(res => JSON.parse(res.stdout).Code.Location);
     });
@@ -73,19 +73,19 @@ const extractDownstreamFunctions = function(config) {
 
 const publishFunction = function(lambdaName, description) {
     return withMessage(`Publishing new version of function ${chalk.blue(lambdaName)}`, function() {
-        return exec(`aws lambda publish-version --function-name ${lambdaName} --description \'${description}\'`);
+        return exec(`aws lambda publish-version --function-name \'${lambdaName}\' --description \'${description}\'`);
     });
 };
 
 const updateFunctionCode = function(codeFileName, lambdaName) {
     return withMessage(`Updating function code for ${chalk.blue(lambdaName)}`, function() {
-        return exec(`aws lambda update-function-code --zip-file fileb://${codeFileName} --function-name ${lambdaName}`);
+        return exec(`aws lambda update-function-code --zip-file fileb://${codeFileName} --function-name \'${lambdaName}\'`);
     });
 };
 
 const getFunctionVersions = function(lambdaName) {
     return withMessage(`Getting versions of ${chalk.blue(lambdaName)}`, function() {
-        return exec(`aws lambda list-versions-by-function --function-name ${lambdaName}`)
+        return exec(`aws lambda list-versions-by-function --function-name \'${lambdaName}\'`)
             .then(res => JSON.parse(res.stdout).Versions);
     });
 };
@@ -132,7 +132,7 @@ commander
     .command('init <lambdaName>')
     .description('init directory for use with lambda')
     .action(lambdaName => {
-        fs.writeFileSync(".lambdoku", lambdaName, {encoding: 'utf8'});
+        fs.writeFileSync(".lambdoku", lambdaName.trim(), {encoding: 'utf8'});
     });
 
 commander
