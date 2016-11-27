@@ -101,19 +101,20 @@ const getFunctionLatestPublishedVersion = function(lambdaName) {
 };
 
 const downloadFunctionCode = function(codeLocation) {
-    return withMessage('Getting code of lambda', () => new Promise((resolve, reject) => {
-        const tempDir = fs.mkdtempSync('/tmp/lambdoku-');
-        const tempFileLocation = tempDir + 'lambdoku-temp.zip';
-        const tempLambdaZipStream = fs.createWriteStream(tempFileLocation);
-        http.get(codeLocation, function(response) {
-            response.pipe(tempLambdaZipStream);
-            response.on('end', function() {
-                tempLambdaZipStream.end();
-                resolve(tempFileLocation);
+    return withMessage('Getting code of lambda',
+        () => new Promise((resolve, reject) => {
+            const tempDir = fs.mkdtempSync('/tmp/lambdoku-');
+            const tempFileLocation = tempDir + 'lambdoku-temp.zip';
+            const tempLambdaZipStream = fs.createWriteStream(tempFileLocation);
+            http.get(codeLocation, function(response) {
+                response.pipe(tempLambdaZipStream);
+                response.on('end', function() {
+                    tempLambdaZipStream.end();
+                    resolve(tempFileLocation);
+                });
+                response.on('error', (err) => reject(err));
             });
-            response.on('error', (err) => reject(err));
-        });
-    }));
+        }));
 };
 
 commander
