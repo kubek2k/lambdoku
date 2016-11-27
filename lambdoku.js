@@ -17,15 +17,6 @@ const handle = function(fn) {
     }
 };
 
-const withMessage = function(message, fn) {
-    process.stdout.write(message);
-    return fn()
-        .then(result => {
-            process.stdout.write(`. ${chalk.green('\u2713')}\n`);
-            return result;
-        });
-};
-
 const getLambdaName = function(commander) {
     if (commander.lambda) {
         return commander.lambda;
@@ -37,67 +28,9 @@ const getLambdaName = function(commander) {
     }
 };
 
-const getFunctionEnvVariables = function(lambdaName, version) {
-    return withMessage(`Getting function configuration of ${chalk.blue(lambdaName)}`, function() {
-        const command = `aws lambda get-function-configuration --function-name \'${lambdaName}\' --qualifier \'${version}\'`;
-        return exec(command, {encoding: 'utf8'})
-            .then(res => {
-                const parsed = JSON.parse(res.stdout);
-                return parsed.Environment ? parsed.Environment.Variables : {};
-            });
-    });
-};
-
-const setFunctionConfiguration = function(lambdaName, config) {
-    return withMessage(`Changing environment variables of ${chalk.blue(lambdaName)}`, function() {
-        const jsonConfig = JSON.stringify({
-            Variables: config
-        });
-        const command = `aws lambda update-function-configuration --function-name \'${lambdaName}\' --environment \'${jsonConfig}\'`;
-        return exec(command, {encoding: 'utf8'});
-    });
-};
-
-const getFunctionCodeLocation = function(lambdaName, version) {
-    return withMessage(`Getting code location for ${chalk.blue(lambdaName)}`, function() {
-        const command = `aws lambda get-function --function-name \'${lambdaName}\' --qualifier \'${version}\'`;
-        return exec(command, {encoding: 'utf8'})
-            .then(res => JSON.parse(res.stdout).Code.Location);
-    });
-};
-
 const extractDownstreamFunctions = function(config) {
     const configStringVal = config['DOWNSTREAM_LAMBDAS'] || '';
     return configStringVal.length > 0 ? configStringVal.split(';') : [];
-};
-
-const publishFunction = function(lambdaName, description) {
-    return withMessage(`Publishing new version of function ${chalk.blue(lambdaName)}`, function() {
-        return exec(`aws lambda publish-version --function-name \'${lambdaName}\' --description \'${description}\'`);
-    });
-};
-
-const updateFunctionCode = function(codeFileName, lambdaName) {
-    return withMessage(`Updating function code for ${chalk.blue(lambdaName)}`, function() {
-        return exec(`aws lambda update-function-code --zip-file fileb://${codeFileName} --function-name \'${lambdaName}\'`);
-    });
-};
-
-const getFunctionVersions = function(lambdaName) {
-    return withMessage(`Getting versions of ${chalk.blue(lambdaName)}`, function() {
-        return exec(`aws lambda list-versions-by-function --function-name \'${lambdaName}\'`)
-            .then(res => JSON.parse(res.stdout).Versions);
-    });
-};
-
-const getFunctionLatestPublishedVersion = function(lambdaName) {
-    return getFunctionVersions(lambdaName)
-        .then(versions => {
-            return versions
-                .map(v => v.Version)
-                .filter(v => v !== '$LATEST')
-                .reverse()[0];
-        });
 };
 
 const downloadFunctionCode = function(codeLocation) {
@@ -115,6 +48,77 @@ const downloadFunctionCode = function(codeLocation) {
                 response.on('error', (err) => reject(err));
             });
         }));
+};
+
+const withMessage = function(message, fn) {
+    process.stdout.write(message);
+    return fn()
+        .then(result => {
+            process.stdout.write(`. ${chalk.green('\u2713')}\n`);
+            return result;
+        });
+};
+
+const AWSLambda = function(lambdaArn) {
+
+    const lambda = {
+        getFunctionEnvVariables: function(version) {
+            return withMessage(`Getting function configuration of ${chalk.blue(lambdaArn)}`, function() {
+                const command = `aws lambda get-function-configuration --function-name \'${lambdaArn}\' --qualifier \'${version}\'`;
+                return exec(command, {encoding: 'utf8'})
+                    .then(res => {
+                        const parsed = JSON.parse(res.stdout);
+                        return parsed.Environment ? parsed.Environment.Variables : {};
+                    });
+            });
+        },
+        setFunctionConfiguration: function(config) {
+            return withMessage(`Changing environment variables of ${chalk.blue(lambdaArn)}`, function() {
+                const jsonConfig = JSON.stringify({
+                    Variables: config
+                });
+                const command = `aws lambda update-function-configuration --function-name \'${lambdaArn}\' --environment \'${jsonConfig}\'`;
+                return exec(command, {encoding: 'utf8'});
+            });
+        },
+        getFunctionCodeLocation: function(version) {
+            return withMessage(`Getting code location for ${chalk.blue(lambdaArn)}`, function() {
+                const command = `aws lambda get-function --function-name \'${lambdaArn}\' --qualifier \'${version}\'`;
+                return exec(command, {encoding: 'utf8'})
+                    .then(res => JSON.parse(res.stdout).Code.Location);
+            });
+        },
+        publishFunction: function(description) {
+            return withMessage(`Publishing new version of function ${chalk.blue(lambdaArn)}`, function() {
+                return exec(`aws lambda publish-version --function-name \'${lambdaArn}\' --description \'${description}\'`);
+            });
+        },
+        updateFunctionCode: function(codeFileName) {
+            return withMessage(`Updating function code for ${chalk.blue(lambdaArn)}`, function() {
+                return exec(`aws lambda update-function-code --zip-file fileb://${codeFileName} --function-name \'${lambdaArn}\'`);
+            });
+        },
+        getFunctionVersions: function() {
+            return withMessage(`Getting versions of ${chalk.blue(lambdaArn)}`, function() {
+                return exec(`aws lambda list-versions-by-function --function-name \'${lambdaArn}\'`)
+                    .then(res => JSON.parse(res.stdout).Versions);
+            });
+        },
+        getFunctionLatestPublishedVersion: function() {
+            return lambda.getFunctionVersions(lambdaArn)
+                .then(versions => {
+                    return versions
+                        .map(v => v.Version)
+                        .filter(v => v !== '$LATEST')
+                        .reverse()[0];
+                });
+        }
+    };
+    return lambda;
+};
+
+const createCommandLineLambda = function(commander) {
+    return AWSLambda(getLambdaName(commander));
 };
 
 commander
@@ -139,7 +143,7 @@ commander
     .command('config')
     .description('get env configuration for lambda')
     .action(handle(() => {
-        return getFunctionEnvVariables(getLambdaName(commander), '$LATEST')
+        return createCommandLineLambda(commander).getFunctionEnvVariables('$LATEST')
             .then(config => {
                 for (const k in config) {
                     console.log(`${k}='${config[k]}'`);
@@ -151,10 +155,10 @@ commander
     .command('config:unset <envName> [envName1...]')
     .description('unset env configuration value on lambda')
     .action(handle((envName, otherEnvNames) => {
-        const lambdaName = getLambdaName(commander);
-        return getFunctionEnvVariables(lambdaName, '$LATEST')
+        const lambda = createCommandLineLambda(commander);
+        return lambda.getFunctionEnvVariables('$LATEST')
             .then(envs => {
-                const envVarsToUnset = otherEnvNames.concat(envName)
+                const envVarsToUnset = otherEnvNames.concat(envName);
                 envVarsToUnset.forEach(envName => {
                     if (!envs.hasOwnProperty(envName)) {
                         throw new Error(`No env variable ${envName} set on lambda ${lambdaName}`);
@@ -163,15 +167,15 @@ commander
                 });
                 return envs;
             })
-            .then(envs => setFunctionConfiguration(lambdaName, envs))
-            .then(() => publishFunction(lambdaName, `Unsetting env variables ${envName}`));
+            .then(envs => lambda.setFunctionConfiguration(envs))
+            .then(() => lambda.publishFunction(`Unsetting env variables ${envName}`));
     }));
 
 commander
     .command('config:set <envName=envValue> [envName1=envValue1...]')
     .description('set env configuration value of lambda')
     .action(handle((assignment1, otherAssignments) => {
-        const lambdaName = getLambdaName(commander);
+        const lambda = createCommandLineLambda(commander);
         const assignments = otherAssignments.concat(assignment1)
             .reduce((acc, assignment) => {
                 const splitted = assignment.split('=');
@@ -181,17 +185,18 @@ commander
                 acc[splitted[0]] = splitted[1];
                 return acc;
             }, {});
-        return getFunctionEnvVariables(lambdaName, '$LATEST')
+        return lambda.getFunctionEnvVariables('$LATEST')
             .then(envs => Object.assign({}, envs, assignments))
-            .then(newEnv => setFunctionConfiguration(lambdaName, newEnv))
-            .then(() => publishFunction(lambdaName, `Set env variables ${Object.keys(assignments)}`));
+            .then(newEnv => lambda.setFunctionConfiguration(newEnv))
+            .then(() => lambda.publishFunction(`Set env variables ${Object.keys(assignments)}`));
     }));
 
 commander
     .command('config:get <envName> [envName1...]')
     .description('get env configuration value of lambda')
     .action(handle((envName1, otherEnvNames) => {
-        return getFunctionEnvVariables(getLambdaName(commander), '$LATEST')
+        const lambda = createCommandLineLambda(commander);
+        return lambda.getFunctionEnvVariables('$LATEST')
             .then(envVariables => {
                 const envs = otherEnvNames.concat(envName1)
                     .reduce((acc, envName) => {
@@ -213,13 +218,13 @@ commander
     .command('downstream')
     .description('get downstream lambdas of given lambda')
     .action(handle(() => {
-        const lambdaName = getLambdaName(commander);
-        return getFunctionEnvVariables(lambdaName, '$LATEST')
+        const lambda = createCommandLineLambda(commander);
+        return lambda.getFunctionEnvVariables('$LATEST')
             .then(config => {
-                const downstreamLambdas = extractDownstreamFunctions(config);
-                downstreamLambdas.forEach(lambdaName => {
-                    console.log(lambdaName);
-                });
+                extractDownstreamFunctions(config)
+                    .forEach(lambdaName => {
+                        console.log(lambdaName);
+                    });
             });
     }));
 
@@ -227,52 +232,52 @@ commander
     .command('downstream:add <downstreamLambdaName>')
     .description('add downstream to given lambda')
     .action(handle(downstreamLambdaName => {
-        const lambdaName = getLambdaName(commander);
-        return getFunctionEnvVariables(lambdaName, '$LATEST')
+        const lambda = createCommandLineLambda(commander);
+        return lambda.getFunctionEnvVariables('$LATEST')
             .then(config => {
                 const downstreamLambdas = extractDownstreamFunctions(config);
                 downstreamLambdas.push(downstreamLambdaName);
                 config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
                 return config;
             })
-            .then(config => setFunctionConfiguration(lambdaName, config))
-            .then(() => publishFunction(lambdaName, `Added downstream ${downstreamLambdaName}`));
+            .then(config => lambda.setFunctionConfiguration(config))
+            .then(() => lambda.publishFunction(`Added downstream ${downstreamLambdaName}`));
     }));
 
 commander
     .command('downstream:remove <downstreamLambdaName>')
     .description('remove downstream from given lambda')
     .action(handle(downstreamLambdaName => {
-        const lambdaName = getLambdaName(commander);
-        return getFunctionEnvVariables(lambdaName, '$LATEST')
+        const lambda = createCommandLineLambda(commander);
+        return lambda.getFunctionEnvVariables('$LATEST')
             .then(config => {
                 const downstreamLambdas = extractDownstreamFunctions(config);
                 downstreamLambdas.splice(downstreamLambdas.indexOf(downstreamLambdaName), 1);
                 config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
                 return config;
             })
-            .then(config => setFunctionConfiguration(lambdaName, config))
-            .then(() => publishFunction(lambdaName, `Removed downstream ${downstreamLambdaName}`));
+            .then(config => lambda.setFunctionConfiguration(config))
+            .then(() => lambda.publishFunction(`Removed downstream ${downstreamLambdaName}`));
     }));
 
 commander
     .command('downstream:promote')
     .description('promote lambda to all its downstreams')
     .action(handle(() => {
-        const lambdaName = getLambdaName(commander);
-        return getFunctionLatestPublishedVersion(lambdaName)
+        const lambda = createCommandLineLambda(commander);
+        return lambda.getFunctionLatestPublishedVersion()
             .then(version => {
-                return getFunctionCodeLocation(lambdaName, version)
+                return lambda.getFunctionCodeLocation(version)
                     .then(functionCodeLocation => downloadFunctionCode(functionCodeLocation))
                     .then(codeFileName => {
-                        return getFunctionEnvVariables(lambdaName, version)
+                        return lambda.getFunctionEnvVariables(version)
                             .then(extractDownstreamFunctions)
                             .then(downstreamLambdas => {
-                                return Promise.all(downstreamLambdas.map(downstreamLambda =>
-                                    updateFunctionCode(codeFileName, downstreamLambda)
-                                        .then(() => publishFunction(downstreamLambda,
-                                            `Promoting code from ${lambdaName} version ${version}`))));
-
+                                return Promise.all(
+                                    downstreamLambdas
+                                        .map(downstreamLambda => AWSLambda(downstreamLambda))
+                                        .map(lambda => lambda.updateFunctionCode(codeFileName)
+                                            .then(() => lambda.publishFunction(`Promoting code from ${lambdaName} version ${version}`))));
                             });
                     });
             });
@@ -282,7 +287,7 @@ commander
     .command('releases')
     .description('lists releases of lambda')
     .action(handle(() => {
-        return getFunctionVersions(getLambdaName(commander))
+        return createCommandLineLambda(commander).getFunctionVersions()
             .then(versions => {
                 versions.reverse()
                     .filter(version => {
@@ -300,13 +305,13 @@ commander
     .command('releases:rollback <version>')
     .description('rolls back to given version of lambda')
     .action(handle((version) => {
-        const lambdaName = getLambdaName(commander);
-        return getFunctionCodeLocation(lambdaName, version)
+        const lambda = createCommandLineLambda(commander);
+        return lambda.getFunctionCodeLocation(version)
             .then(codeLocation => downloadFunctionCode(codeLocation))
-            .then(codeFileName => updateFunctionCode(codeFileName, lambdaName))
-            .then(() => getFunctionEnvVariables(lambdaName, version))
-            .then(config => setFunctionConfiguration(lambdaName, config))
-            .then(() => publishFunction(lambdaName, `Rolling back to version ${version}`));
+            .then(codeFileName => lambda.updateFunctionCode(codeFileName))
+            .then(() => lambda.getFunctionEnvVariables(version))
+            .then(config => lambda.setFunctionConfiguration(config))
+            .then(() => lambda.publishFunction(`Rolling back to version ${version}`));
     }));
 
 commander
