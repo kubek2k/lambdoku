@@ -69,9 +69,11 @@ now `lambdaDev` and `lambdaStage` have the same codebase.
 
 ## Installation
 
-1. _Prerequisite:_ AWS CLI
-   * Install according to https://aws.amazon.com/cli/
-   * Make sure to run `aws configure` to specify access keys and region
+1. _Prerequisite:_ AWS Environment variables
+   * Set required variables:
+     * `AWS_ACCESS_KEY_ID`
+     * `AWS_SECRET_ACCESS_KEY`
+     * `AWS_DEFAULT_REGION`
 2. _Prerequisite:_ Node and npm _(ES6 support required)_
    * On OS X with homebrew: `brew update && brew install node`
 3. Then, simply:
@@ -81,7 +83,7 @@ now `lambdaDev` and `lambdaStage` have the same codebase.
    ```
 
 ## Internals (aka 'how it works?')
- * it's simply an abstraction layer over AWS Lambda API effectively invoking `aws-cli`
+ * it's simply an abstraction layer over AWS Lambda API effectively invoking `aws-sdk`
  * each change applied to lambda is finished with lambda version publication
  * the `rollback` and `promote` operations retrieve code from AWS and uploads it in place of current one
  * pipelines use special env variable (please :pray: don't use it :)) `DOWNSTREAM_LAMBDAS` to the dowstreams
