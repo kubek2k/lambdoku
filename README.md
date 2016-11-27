@@ -7,7 +7,7 @@ Heroku-like experience with AWS Lambdas.
 ### Connecting current directory with lambda (like `heroku git:remote`)
 
 ```shell
-$ lambdoku init someLambda
+$ lambdoku init <ARN-of-your-lambda-function>
 ```
 
 this allows you to omit the `-a` param for all commands below
@@ -69,14 +69,16 @@ now `lambdaDev` and `lambdaStage` have the same codebase.
 
 ## Installation
 
-Simply:
-```shell
-npm install -g lambdoku
-```
+1. _Prerequisite:_ AWS CLI
+   * Install according to https://aws.amazon.com/cli/
+   * Make sure to run `aws configure` to specify access keys and region
+2. _Prerequisite:_ Node and npm _(ES6 support required)_
+   * On OS X with homebrew: `brew update && brew install node`
+3. Then, simply:
 
-make sure you have a modern node.js installation (ES6 is needed). 
-
-Additionally you will need a configured `aws-cli` installation on your computer: https://aws.amazon.com/cli/
+   ```shell
+   npm install -g lambdoku
+   ```
 
 ## Internals (aka 'how it works?')
  * it's simply an abstraction layer over AWS Lambda API effectively invoking `aws-cli`
