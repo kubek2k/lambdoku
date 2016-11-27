@@ -50,16 +50,20 @@ const downloadFunctionCode = function(codeLocation) {
         }));
 };
 
-const withMessage = function(message, fn) {
-    process.stdout.write(message);
+const withMessage = function(message, fn, verbose) {
+    if (verbose) {
+        process.stdout.write(message);
+    }
     return fn()
         .then(result => {
-            process.stdout.write(`. ${chalk.green('\u2713')}\n`);
+            if (verbose) {
+                process.stdout.write(`. ${chalk.green('\u2713')}\n`);
+            }
             return result;
         });
 };
 
-const AWSLambda = function(lambdaArn) {
+const AWSLambda = function(lambdaArn, verbose) {
 
     const lambda = {
         getFunctionEnvVariables: function(version) {
@@ -69,7 +73,7 @@ const AWSLambda = function(lambdaArn) {
                     .then(res => {
                         const parsed = JSON.parse(res.stdout);
                         return parsed.Environment ? parsed.Environment.Variables : {};
-                    });
+                    }, verbose);
             });
         },
         setFunctionConfiguration: function(config) {
@@ -79,30 +83,30 @@ const AWSLambda = function(lambdaArn) {
                 });
                 const command = `aws lambda update-function-configuration --function-name \'${lambdaArn}\' --environment \'${jsonConfig}\'`;
                 return exec(command, {encoding: 'utf8'});
-            });
+            }, verbose);
         },
         getFunctionCodeLocation: function(version) {
             return withMessage(`Getting code location for ${chalk.blue(lambdaArn)}`, function() {
                 const command = `aws lambda get-function --function-name \'${lambdaArn}\' --qualifier \'${version}\'`;
                 return exec(command, {encoding: 'utf8'})
                     .then(res => JSON.parse(res.stdout).Code.Location);
-            });
+            }, verbose);
         },
         publishFunction: function(description) {
             return withMessage(`Publishing new version of function ${chalk.blue(lambdaArn)}`, function() {
                 return exec(`aws lambda publish-version --function-name \'${lambdaArn}\' --description \'${description}\'`);
-            });
+            }, verbose);
         },
         updateFunctionCode: function(codeFileName) {
             return withMessage(`Updating function code for ${chalk.blue(lambdaArn)}`, function() {
                 return exec(`aws lambda update-function-code --zip-file fileb://${codeFileName} --function-name \'${lambdaArn}\'`);
-            });
+            }, verbose);
         },
         getFunctionVersions: function() {
             return withMessage(`Getting versions of ${chalk.blue(lambdaArn)}`, function() {
                 return exec(`aws lambda list-versions-by-function --function-name \'${lambdaArn}\'`)
                     .then(res => JSON.parse(res.stdout).Versions);
-            });
+            }, verbose);
         },
         getFunctionLatestPublishedVersion: function() {
             return lambda.getFunctionVersions(lambdaArn)
@@ -118,12 +122,13 @@ const AWSLambda = function(lambdaArn) {
 };
 
 const createCommandLineLambda = function(commander) {
-    return AWSLambda(getLambdaName(commander));
+    return AWSLambda(getLambdaName(commander), commander.verbose);
 };
 
 commander
     .version('1.0')
-    .option('-a, --lambda <lambdaName>', 'lambda to run operation on');
+    .option('-a, --lambda <lambdaName>', 'lambda to run operation on')
+    .option('-v --verbose', 'turn on verbose output');
 
 commander
     .command('help')
@@ -264,6 +269,7 @@ commander
     .command('downstream:promote')
     .description('promote lambda to all its downstreams')
     .action(handle(() => {
+        const lambdaName = getLambdaName(commander);
         const lambda = createCommandLineLambda(commander);
         return lambda.getFunctionLatestPublishedVersion()
             .then(version => {
@@ -275,7 +281,7 @@ commander
                             .then(downstreamLambdas => {
                                 return Promise.all(
                                     downstreamLambdas
-                                        .map(downstreamLambda => AWSLambda(downstreamLambda))
+                                        .map(downstreamLambda => AWSLambda(downstreamLambda, commander.verbose))
                                         .map(lambda => lambda.updateFunctionCode(codeFileName)
                                             .then(() => lambda.publishFunction(`Promoting code from ${lambdaName} version ${version}`))));
                             });
