@@ -220,8 +220,9 @@ commander
     }));
 
 commander
-    .command('downstream')
-    .description('get downstream lambdas of given lambda')
+    .command('pipeline')
+    .alias('pipelines')
+    .description('show downstream lambdas of given lambda')
     .action(handle(() => {
         const lambda = createCommandLineLambda(commander);
         return lambda.getFunctionEnvVariables('$LATEST')
@@ -234,7 +235,8 @@ commander
     }));
 
 commander
-    .command('downstream:add <downstreamLambdaName>')
+    .command('pipeline:add <downstreamLambdaName>')
+    .alias('pipelines:add')
     .description('add downstream to given lambda')
     .action(handle(downstreamLambdaName => {
         const lambda = createCommandLineLambda(commander);
@@ -250,7 +252,8 @@ commander
     }));
 
 commander
-    .command('downstream:remove <downstreamLambdaName>')
+    .command('pipeline:remove <downstreamLambdaName>')
+    .alias('pipelines:remove')
     .description('remove downstream from given lambda')
     .action(handle(downstreamLambdaName => {
         const lambda = createCommandLineLambda(commander);
@@ -266,7 +269,8 @@ commander
     }));
 
 commander
-    .command('downstream:promote')
+    .command('pipeline:promote')
+    .alias('pipelines:promote')
     .description('promote lambda to all its downstreams')
     .action(handle(() => {
         const lambdaName = getLambdaName(commander);
@@ -308,7 +312,8 @@ commander
     }));
 
 commander
-    .command('releases:rollback <version>')
+    .command('rollback <version>')
+    .command('releases:rollback')
     .description('rolls back to given version of lambda')
     .action(handle((version) => {
         const lambda = createCommandLineLambda(commander);
