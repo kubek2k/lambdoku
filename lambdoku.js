@@ -66,7 +66,7 @@ const getFunctionCodeLocation = function(lambdaName, version) {
     });
 };
 
-const extractDownstreamLambdas = function(config) {
+const extractDownstreamFunctions = function(config) {
     const configStringVal = config['DOWNSTREAM_LAMBDAS'] || '';
     return configStringVal.length > 0 ? configStringVal.split(';') : [];
 };
@@ -100,7 +100,7 @@ const getFunctionLatestPublishedVersion = function(lambdaName) {
         });
 };
 
-const downloadCode = function(codeLocation) {
+const downloadFunctionCode = function(codeLocation) {
     return withMessage('Getting code of lambda', () => new Promise((resolve, reject) => {
         const tempDir = fs.mkdtempSync('/tmp/lambdoku-');
         const tempFileLocation = tempDir + 'lambdoku-temp.zip';
@@ -215,7 +215,7 @@ commander
         const lambdaName = getLambdaName(commander);
         return getFunctionEnvVariables(lambdaName, '$LATEST')
             .then(config => {
-                const downstreamLambdas = extractDownstreamLambdas(config);
+                const downstreamLambdas = extractDownstreamFunctions(config);
                 downstreamLambdas.forEach(lambdaName => {
                     console.log(lambdaName);
                 });
@@ -229,7 +229,7 @@ commander
         const lambdaName = getLambdaName(commander);
         return getFunctionEnvVariables(lambdaName, '$LATEST')
             .then(config => {
-                const downstreamLambdas = extractDownstreamLambdas(config);
+                const downstreamLambdas = extractDownstreamFunctions(config);
                 downstreamLambdas.push(downstreamLambdaName);
                 config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
                 return config;
@@ -245,7 +245,7 @@ commander
         const lambdaName = getLambdaName(commander);
         return getFunctionEnvVariables(lambdaName, '$LATEST')
             .then(config => {
-                const downstreamLambdas = extractDownstreamLambdas(config);
+                const downstreamLambdas = extractDownstreamFunctions(config);
                 downstreamLambdas.splice(downstreamLambdas.indexOf(downstreamLambdaName), 1);
                 config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
                 return config;
@@ -262,10 +262,10 @@ commander
         return getFunctionLatestPublishedVersion(lambdaName)
             .then(version => {
                 return getFunctionCodeLocation(lambdaName, version)
-                    .then(functionCodeLocation => downloadCode(functionCodeLocation))
+                    .then(functionCodeLocation => downloadFunctionCode(functionCodeLocation))
                     .then(codeFileName => {
                         return getFunctionEnvVariables(lambdaName, version)
-                            .then(extractDownstreamLambdas)
+                            .then(extractDownstreamFunctions)
                             .then(downstreamLambdas => {
                                 return Promise.all(downstreamLambdas.map(downstreamLambda =>
                                     updateFunctionCode(codeFileName, downstreamLambda)
@@ -301,7 +301,7 @@ commander
     .action(handle((version) => {
         const lambdaName = getLambdaName(commander);
         return getFunctionCodeLocation(lambdaName, version)
-            .then(codeLocation => downloadCode(codeLocation))
+            .then(codeLocation => downloadFunctionCode(codeLocation))
             .then(codeFileName => updateFunctionCode(codeFileName, lambdaName))
             .then(() => getFunctionEnvVariables(lambdaName, version))
             .then(config => setFunctionConfiguration(lambdaName, config))
