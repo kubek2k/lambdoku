@@ -91,6 +91,6 @@ now `lambdaDev` and `lambdaStage` have the same codebase.
 ## Known issues
 
 Due to the nature of AWS Lambda API most of the operations can't be considered atomic, like:
-  * the change in configuration has to first retrieve current configuration - which may be change in the mean time
-  * the rollback can be infected with change done in configuration in the 'mean time'
+  * the change in configuration has to first retrieve current configuration - which may be change in the meantime
+  * the rollback can be infected with change done in configuration in the 'meantime'
   * the pipelines promote can be infected by changes done at the same time on downstream
