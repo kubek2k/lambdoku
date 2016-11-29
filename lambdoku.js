@@ -343,6 +343,11 @@ commander
     }));
 
 commander
+    .command('push <fileName>')
+    .description('pushes given zip/jar file to be used by lambda')
+    .action(handle((fileName) => createCommandLineLambda(commander).updateFunctionCode(fileName)));
+
+commander
     .command('*')
     .action(() => {
         commander.help();
