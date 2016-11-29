@@ -12,6 +12,11 @@ $ lambdoku init <ARN-of-your-lambda-function>
 
 this allows you to omit the `-a` param for all commands below
 
+### Simple push of the zip/jar file
+
+```
+$ lambdoku push hello.zip
+```
 
 ### Simplified environment variables management (`heroku config`)
 
