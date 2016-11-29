@@ -10,8 +10,9 @@ Heroku-like experience with AWS Lambdas.
 $ lambdoku init <ARN-of-your-lambda-function>
 ```
 
-this allows you to omit the `-a` param for all commands below
+this allows you to omit the `-a` param for all commands below. 
 
+In theory you can pass multiple lambdas in command line to managed them all by once (but this can easily lead to mistakes)
 
 ### Simplified environment variables management (`heroku config`)
 
