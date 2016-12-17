@@ -143,8 +143,8 @@ const createCommandLineLambda = function(commander) {
     return AWSLambdaClient(getLambdaName(commander), commander.verbose);
 };
 
-const createCommandLineLogs = function(commander) {
-    return AWSLogs(getLambdaName(commander), commander.number);
+const createCommandLineLogs = function(commander, command) {
+    return AWSLogs(getLambdaName(commander), command.number);
 };
 
 commander
@@ -349,10 +349,10 @@ commander
 
 commander
     .command('logs')
+    .option('-n,--number <number>', 'number of entries', Number, 100)
     .description('gets the latest logs for lambda')
-    .option('-n, --number', 'number of entries', 100)
-    .action(handle(() => {
-        const retrieveLogs = createCommandLineLogs(commander);
+    .action(handle((command) => {
+        const retrieveLogs = createCommandLineLogs(commander, command);
         return retrieveLogs()
             .then(({events}) => {
                 return events.forEach(({timestamp, message}) => {
