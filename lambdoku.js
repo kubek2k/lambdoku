@@ -8,6 +8,7 @@ const exec = require('child-process-promise').exec;
 const http = require('https');
 const chalk = require('chalk');
 const Lambda = require('aws-sdk-promise').Lambda;
+const AWSLogs = require('./logs');
 
 const handle = function(fn) {
     return function() {
@@ -140,6 +141,10 @@ const AWSLambdaClient = function(lambdaArn, verbose) {
 
 const createCommandLineLambda = function(commander) {
     return AWSLambdaClient(getLambdaName(commander), commander.verbose);
+};
+
+const createCommandLineLogs = function(commander) {
+    return AWSLogs(getLambdaName(commander), commander.number);
 };
 
 commander
@@ -340,6 +345,21 @@ commander
             .then(() => lambda.getFunctionEnvVariables(version))
             .then(config => lambda.setFunctionConfiguration(config))
             .then(() => lambda.publishFunction(`Rolling back to version ${version}`));
+    }));
+
+commander
+    .command('logs')
+    .description('gets the latest logs for lambda')
+    .option('-n, --number', 'number of entries', 100)
+    .action(handle(() => {
+        const retrieveLogs = createCommandLineLogs(commander);
+        return retrieveLogs()
+            .then(({events}) => {
+                return events.forEach(({timestamp, message}) => {
+                    const date = new Date(timestamp);
+                    console.log(`${chalk.cyan(date.toISOString())}: ${chalk.white(message)}`);
+                });
+            });
     }));
 
 commander
