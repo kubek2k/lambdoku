@@ -350,16 +350,32 @@ commander
 commander
     .command('logs')
     .option('-n,--number <number>', 'number of entries', Number, 100)
+    .option('-t, --tail', 'tail logs', false)
     .description('gets the latest logs for lambda')
     .action(handle((command) => {
         const retrieveLogs = createCommandLineLogs(commander, command);
-        return retrieveLogs()
-            .then(({events}) => {
-                return events.forEach(({timestamp, message}) => {
-                    const date = new Date(timestamp);
-                    console.log(`${chalk.cyan(date.toISOString())}: ${chalk.white(message)}`);
-                });
+        const printLogEvents = (events) => {
+            return events.forEach(({timestamp, message}) => {
+                const date = new Date(timestamp);
+                console.log(`${chalk.cyan(date.toISOString())}: ${chalk.white(message)}`);
             });
+        };
+        if (!command.tail) {
+            return retrieveLogs()
+                .then(({events}) => printLogEvents(events));
+        } else {
+            const getNextBatchOfLogs = (lastEventIds, startTime) => {
+                return retrieveLogs(startTime)
+                    .then(({events}) => events.filter(event => lastEventIds.indexOf(event.eventId) < 0))
+                    .then(events => {
+                        printLogEvents(events);
+                        const eventIds = events.map(event => event.eventId);
+                        const latestTimestamp = events.reduce((max, event) => event.ingestionTime > max ? event.ingestionTime : max, 0);
+                        return getNextBatchOfLogs(eventIds, Math.max(latestTimestamp, startTime));
+                    })
+            };
+            return getNextBatchOfLogs([], null);
+        }
     }));
 
 commander

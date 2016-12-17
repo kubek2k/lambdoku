@@ -20,12 +20,13 @@ module.exports = (lambdaArnOrName, numberOfEntries) => {
     const arn = parseArn(lambdaArnOrName);
     const logs = new Logs({region: arn.region});
     const lambdaName = arn.name;
-    return () => {
+    return (startTime) => {
         const logGroupName = `/aws/lambda/${lambdaName}`;
         return logs
             .filterLogEvents({
-                logGroupName: logGroupName,
-                limit: numberOfEntries
+                limit: numberOfEntries,
+                logGroupName,
+                startTime
             })
             .promise()
             .then(({data}) => {
