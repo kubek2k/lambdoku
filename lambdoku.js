@@ -368,7 +368,7 @@ commander
                 .then(({events}) => printLogEvents(events));
         } else {
             const handleLogs = (data) => {
-                const {events, nextToken, searchedLogStreams} = data;
+                const {events, nextToken} = data;
                 const notSeenEvents = events.filter(({eventId}) => {
                     return !lookbackBuffer.seen(eventId)
                 });
