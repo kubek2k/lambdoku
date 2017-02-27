@@ -365,8 +365,7 @@ commander
         if (!command.tail) {
             return retrieveLogs
                 .forPeriod(retrieveSince, Date.now())
-                .then(({events}) => printLogEvents(events))
-                .then(() => retrieveLogs.all().then(({events}) => printLogEvents(events)));
+                .then(({events}) => printLogEvents(events));
         } else {
             const handleLogs = (data) => {
                 const {events, nextToken, searchedLogStreams} = data;
