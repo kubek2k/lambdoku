@@ -9,6 +9,7 @@ const http = require('https');
 const chalk = require('chalk');
 const Lambda = require('aws-sdk-promise').Lambda;
 const AWSLogs = require('./logs');
+const lookback = require('./lookback');
 
 const handle = function(fn) {
     return function() {
@@ -355,26 +356,52 @@ commander
     .action(handle((command) => {
         const retrieveLogs = createCommandLineLogs(commander, command);
         const printLogEvents = (events) => {
-            return events.forEach(({timestamp, message}) => {
+            return events.forEach(({timestamp, message, ingestionTime}) => {
                 const date = new Date(timestamp);
-                console.log(`${chalk.cyan(date.toISOString())}: ${chalk.white(message)}`);
+                const ingestion = new Date(ingestionTime);
+                console.log(`${timestamp}/${chalk.cyan(date.toISOString())}/${ingestion.toISOString()}: ${chalk.white(message.trim())}`);
             });
         };
+        const lookbackBuffer = lookback(100000);
+        const timeoutPromise = () => new Promise(resolve => setTimeout(resolve, 1000));
+        const retrieveSince = Date.now() - 20 * 1000;
         if (!command.tail) {
-            return retrieveLogs()
-                .then(({events}) => printLogEvents(events));
+            return retrieveLogs
+                .forPeriod(retrieveSince, Date.now())
+                .then(({events}) => printLogEvents(events))
+                .then(() => retrieveLogs.all().then(({events}) => printLogEvents(events)));
         } else {
-            const getNextBatchOfLogs = (lastEventIds, startTime) => {
-                return retrieveLogs(startTime)
-                    .then(({events}) => events.filter(event => lastEventIds.indexOf(event.eventId) < 0))
-                    .then(events => {
-                        printLogEvents(events);
-                        const eventIds = events.map(event => event.eventId);
-                        const latestTimestamp = events.reduce((max, event) => event.ingestionTime > max ? event.ingestionTime : max, 0);
-                        return getNextBatchOfLogs(eventIds, Math.max(latestTimestamp, startTime));
-                    })
+            const handleLogs = (data) => {
+                const {events, nextToken, searchedLogStreams} = data;
+                const notSeenEvents = events.filter(({eventId}) => {
+                    return !lookbackBuffer.seen(eventId)
+                });
+                printLogEvents(notSeenEvents);
+                events
+                    .forEach(({eventId}) => {
+                        lookbackBuffer.add(eventId);
+                    });
+                return nextToken;
             };
-            return getNextBatchOfLogs([], null);
+            const completelyConsume = (nextToken) => {
+                if (nextToken) {
+                    return retrieveLogs
+                        .next(nextToken)
+                        .then(handleLogs)
+                        .then((newNextToken => completelyConsume(newNextToken)));
+                }
+            };
+            const continuouslyConsume = (since) => {
+                const till = Date.now();
+                return retrieveLogs
+                    .forPeriod(since, till)
+                    .then(handleLogs)
+                    .then(completelyConsume)
+                    .then(timeoutPromise)
+                    .then(() => continuouslyConsume(till - (20 * 1000)))
+
+            };
+            return continuouslyConsume(retrieveSince);
         }
     }));
 

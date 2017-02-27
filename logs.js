@@ -20,22 +20,40 @@ module.exports = (lambdaArnOrName, numberOfEntries) => {
     const arn = parseArn(lambdaArnOrName);
     const logs = new Logs({region: arn.region});
     const lambdaName = arn.name;
-    return (startTime) => {
-        const logGroupName = `/aws/lambda/${lambdaName}`;
-        return logs
-            .filterLogEvents({
-                limit: numberOfEntries,
-                logGroupName,
-                startTime
-            })
-            .promise()
-            .then(({data}) => {
-                return data;
-            })
-            .catch(err => {
-                if (err.statusCode === 400)
-                    throw new Error(`No logs for lambda ${lambdaName}`, err);
-                throw err;
-            });
+    return {
+        forPeriod: (startTime, endTime) => {
+            const logGroupName = `/aws/lambda/${lambdaName}`;
+            return logs
+                .filterLogEvents({
+                    limit: numberOfEntries,
+                    logGroupName,
+                    startTime,
+                    endTime
+                })
+                .promise()
+                .then(({data}) => {
+                    return data;
+                })
+                .catch(err => {
+                    if (err.statusCode === 400)
+                        throw new Error(`No logs for lambda ${lambdaName}`, err);
+                    throw err;
+                });
+        },
+        next: nextToken => {
+            const logGroupName = `/aws/lambda/${lambdaName}`;
+            return logs
+                .filterLogEvents({
+                    logGroupName,
+                    nextToken
+                })
+                .promise()
+                .then(({data}) => data)
+                .catch(err => {
+                    if (err.statusCode === 400)
+                        throw new Error(`No logs for lambda ${lambdaName}`, err);
+                    throw err;
+                });
+        }
     };
 };
