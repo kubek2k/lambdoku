@@ -8,9 +8,9 @@ const exec = require('child-process-promise').exec;
 const http = require('https');
 const chalk = require('chalk');
 const Lambda = require('aws-sdk-promise').Lambda;
-const AWSLogs = require('./logs');
-const lookback = require('./lookback');
-const printLogEvent = require('./printLogEvent');
+const AWSLogs = require('./logs/logs');
+const lookback = require('./logs/lookback');
+const printLogEvent = require('./logs/printLogEvent');
 
 const handle = function(fn) {
     return function() {
