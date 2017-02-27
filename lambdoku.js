@@ -364,7 +364,7 @@ commander
         const retrieveSince = Date.now() - 20 * 1000;
         if (!command.tail) {
             return retrieveLogs
-                .since(retrieveSince, Date.now())
+                .since(retrieveSince)
                 .then(({events}) => printLogEvents(events));
         } else {
             const handleLogs = (data) => {
