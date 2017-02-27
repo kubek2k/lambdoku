@@ -26,6 +26,7 @@ module.exports = (lambdaArnOrName, numberOfEntries) => {
             return logs
                 .filterLogEvents({
                     limit: numberOfEntries,
+                    interleaved: true,
                     logGroupName,
                     startTime,
                     endTime
