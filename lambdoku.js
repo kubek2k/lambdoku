@@ -10,6 +10,7 @@ const chalk = require('chalk');
 const Lambda = require('aws-sdk-promise').Lambda;
 const AWSLogs = require('./logs');
 const lookback = require('./lookback');
+const printLogEvent = require('./printLogEvent');
 
 const handle = function(fn) {
     return function() {
@@ -356,11 +357,7 @@ commander
     .action(handle((command) => {
         const retrieveLogs = createCommandLineLogs(commander, command);
         const printLogEvents = (events) => {
-            return events.forEach(({timestamp, message, ingestionTime}) => {
-                const date = new Date(timestamp);
-                const ingestion = new Date(ingestionTime);
-                console.log(`${timestamp}/${chalk.cyan(date.toISOString())}/${ingestion.toISOString()}: ${chalk.white(message.trim())}`);
-            });
+            return events.forEach(printLogEvent);
         };
         const lookbackBuffer = lookback(100000);
         const timeoutPromise = () => new Promise(resolve => setTimeout(resolve, 1000));
