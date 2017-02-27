@@ -21,15 +21,14 @@ module.exports = (lambdaArnOrName, numberOfEntries) => {
     const logs = new Logs({region: arn.region});
     const lambdaName = arn.name;
     return {
-        forPeriod: (startTime, endTime) => {
+        since: (startTime) => {
             const logGroupName = `/aws/lambda/${lambdaName}`;
             return logs
                 .filterLogEvents({
                     limit: numberOfEntries,
                     interleaved: true,
                     logGroupName,
-                    startTime,
-                    endTime
+                    startTime
                 })
                 .promise()
                 .then(({data}) => {

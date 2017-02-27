@@ -364,7 +364,7 @@ commander
         const retrieveSince = Date.now() - 20 * 1000;
         if (!command.tail) {
             return retrieveLogs
-                .forPeriod(retrieveSince, Date.now())
+                .since(retrieveSince, Date.now())
                 .then(({events}) => printLogEvents(events));
         } else {
             const handleLogs = (data) => {
@@ -388,13 +388,12 @@ commander
                 }
             };
             const continuouslyConsume = (since) => {
-                const till = Date.now();
                 return retrieveLogs
-                    .forPeriod(since, till)
+                    .since(since)
                     .then(handleLogs)
                     .then(completelyConsume)
                     .then(timeoutPromise)
-                    .then(() => continuouslyConsume(till - (20 * 1000)))
+                    .then(() => continuouslyConsume(Date.now() - (20 * 1000)))
 
             };
             return continuouslyConsume(retrieveSince);
