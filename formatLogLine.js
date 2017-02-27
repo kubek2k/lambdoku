@@ -9,7 +9,10 @@ module.exports = function(parsedLogLine) {
             return 'Request finished'
         },
         report: function(line) {
-            return 'Request reported'
+            return `Request reported. Duration: ${line.durationMs}ms, ` +
+                `Billed Duration: ${line.billedDurationMs}ms, ` +
+                `Memory Size: ${line.memorySize}MB, ` +
+                `Max Memory Used: ${line.maxMemoryUsed}MB`;
         },
         simple: function(line) {
             return line.message.trim();
