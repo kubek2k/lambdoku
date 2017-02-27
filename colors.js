@@ -3,8 +3,8 @@
 const chalk = require('chalk');
 
 module.exports = function() {
-    const colors = Object.keys(chalk.styles)
-        .filter(color => color !== 'reset');
+    const colors = ["bgBlack", "bgBlue", "bgCyan", "bgGreen", "bgMagenta", "bgRed", "bgWhite", "bgYellow", "blue",
+        "cyan", "gray", "green", "grey", "magenta", "red", "yellow"];
     let nextColorIndex = 0;
     const assignment = {};
     return function(requestId, message) {
