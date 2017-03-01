@@ -77,12 +77,12 @@ now `lambdaDev` and `lambdaStage` have the same codebase.
 To get 100 latest log lines from all lambda invocations:
 
 ```shell
-lambdoku logs -n 100
+$ lambdoku logs -n 100
 ```
 
 To follow logs produced by all lambda invocations:
 ```shell
-lambdoku -f 
+$ lambdoku -f 
 ```
 
 ## Installation
