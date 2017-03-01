@@ -8,6 +8,9 @@ const exec = require('child-process-promise').exec;
 const http = require('https');
 const chalk = require('chalk');
 const Lambda = require('aws-sdk-promise').Lambda;
+const AWSLogs = require('./logs/logs');
+const lookback = require('./logs/lookback');
+const printLogEvent = require('./logs/printLogEvent');
 
 const handle = function(fn) {
     return function() {
@@ -140,6 +143,10 @@ const AWSLambdaClient = function(lambdaArn, verbose) {
 
 const createCommandLineLambda = function(commander) {
     return AWSLambdaClient(getLambdaName(commander), commander.verbose);
+};
+
+const createCommandLineLogs = function(commander, command) {
+    return AWSLogs(getLambdaName(commander), command.number);
 };
 
 commander
@@ -340,6 +347,57 @@ commander
             .then(() => lambda.getFunctionEnvVariables(version))
             .then(config => lambda.setFunctionConfiguration(config))
             .then(() => lambda.publishFunction(`Rolling back to version ${version}`));
+    }));
+
+commander
+    .command('logs')
+    .option('-n,--number <number>', 'number of entries', Number, 100)
+    .option('-t, --tail', 'tail logs', false)
+    .description('gets the latest logs for lambda')
+    .action(handle((command) => {
+        const retrieveLogs = createCommandLineLogs(commander, command);
+        const printLogEvents = (events) => {
+            return events.forEach(printLogEvent);
+        };
+        const lookbackBuffer = lookback(100000);
+        const timeoutPromise = () => new Promise(resolve => setTimeout(resolve, 1000));
+        const retrieveSince = Date.now() - 20 * 1000;
+        if (!command.tail) {
+            return retrieveLogs
+                .since(retrieveSince)
+                .then(({events}) => printLogEvents(events));
+        } else {
+            const handleLogs = (data) => {
+                const {events, nextToken} = data;
+                const notSeenEvents = events.filter(({eventId}) => {
+                    return !lookbackBuffer.seen(eventId)
+                });
+                printLogEvents(notSeenEvents);
+                events
+                    .forEach(({eventId}) => {
+                        lookbackBuffer.add(eventId);
+                    });
+                return nextToken;
+            };
+            const completelyConsume = (nextToken) => {
+                if (nextToken) {
+                    return retrieveLogs
+                        .next(nextToken)
+                        .then(handleLogs)
+                        .then((newNextToken => completelyConsume(newNextToken)));
+                }
+            };
+            const continuouslyConsume = (since) => {
+                return retrieveLogs
+                    .since(since)
+                    .then(handleLogs)
+                    .then(completelyConsume)
+                    .then(timeoutPromise)
+                    .then(() => continuouslyConsume(Date.now() - (20 * 1000)))
+
+            };
+            return continuouslyConsume(retrieveSince);
+        }
     }));
 
 commander
