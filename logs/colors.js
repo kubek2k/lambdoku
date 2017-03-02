@@ -3,6 +3,24 @@
 const chalk = require('chalk');
 const EXPIRATION_WRITE_STEP = 100;
 const EXPIRATION_LOOK_BACK = 300 * 1000;
+const COLORS = ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white', 'gray'];
+const BG_COLORS = ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'];
+const generateColorPairs = function() {
+    return COLORS
+        .map((color) => {
+            return BG_COLORS
+                .filter(bgColor => bgColor !== color)
+                .map(bgColor => 'bg' + bgColor.charAt(0).toUpperCase() + bgColor.substring(1))
+                .map(bgColor => ({color, bgColor}));
+        })
+        .reduce((acc, val) => {
+            val.forEach((v) => {
+                acc.push(v);
+            });
+            return acc;
+        }, []);
+};
+const COLOR_PAIRS = generateColorPairs(COLORS);
 
 const performExpiration = function(assignments) {
     const expirationLimit = Date.now() - EXPIRATION_LOOK_BACK;
@@ -14,23 +32,22 @@ const performExpiration = function(assignments) {
 };
 
 module.exports = function() {
-    const colors = ["bgBlack", "bgBlue", "bgCyan", "bgGreen", "bgMagenta", "bgRed", "bgWhite", "bgYellow", "blue",
-        "cyan", "gray", "green", "grey", "magenta", "red", "yellow"];
-    let nextColorIndex = 0;
+    let nextColorPairIndex = 0;
     let writeCount = 0;
     const assignments = {};
     return function(requestId, message) {
         if (!assignments[requestId]) {
             assignments[requestId] = {
-                color: colors[nextColorIndex],
+                colorPair: COLOR_PAIRS[nextColorPairIndex],
                 timestamp: Date.now()
             };
-            nextColorIndex = (nextColorIndex + 1) % colors.length;
+            nextColorPairIndex = (nextColorPairIndex + 1) % COLOR_PAIRS.length;
             if (writeCount++ == EXPIRATION_WRITE_STEP) {
                 performExpiration(assignments);
                 writeCount = 0;
             }
         }
-        return chalk[assignments[requestId].color](message);
+        const colorPair = assignments[requestId].colorPair;
+        return chalk[colorPair.color][colorPair.bgColor](message);
     };
 };
