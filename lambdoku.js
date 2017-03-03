@@ -403,7 +403,11 @@ commander
 commander
     .command('push <fileName>')
     .description('pushes given zip/jar file to be used by lambda')
-    .action(handle((fileName) => createCommandLineLambda(commander).updateFunctionCode(fileName)));
+    .action(handle((fileName) => {
+        const commandLineLambda = createCommandLineLambda(commander);
+        return commandLineLambda.updateFunctionCode(fileName)
+            .then(commandLineLambda.publishFunction('New function code version'));
+    }));
 
 commander
     .command('*')
