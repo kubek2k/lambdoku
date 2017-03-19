@@ -119,23 +119,32 @@ const AWSLambdaClient = function(lambdaArn, verbose) {
                     }).promise()
                 , verbose);
         },
-        getFunctionVersions: function() {
+        getFunctionVersions: function(nextMarker) {
             return withMessage(`Getting versions of ${chalk.blue(lambdaArn)}`,
-                () =>
-                    lambda.listVersionsByFunction({
-                        FunctionName: lambdaArn
-                    }).promise()
-                        .then(res => res.data.Versions)
-                , verbose);
+                    () => lambda.listVersionsByFunction({
+                        FunctionName: lambdaArn,
+                        Marker: nextMarker
+                    })
+                    .promise()
+                    .then(res => ({
+                        versions: res.data.Versions,
+                        nextMarker: res.data.NextMarker
+                    })), verbose);
         },
         getFunctionLatestPublishedVersion: function() {
-            return client.getFunctionVersions(lambdaArn)
-                .then(versions => {
-                    return versions
+            const goToTheLastVersionList = function(nextMarker) {
+                return client.getFunctionVersions(nextMarker)
+                    .then(result => {
+                        if (result.nextMarker) {
+                            return goToTheLastVersionList(result.nextMarker);
+                        }
+                        return result.versions;
+                    })
+            };
+            return goToTheLastVersionList()
+                .then(versions => versions
                         .map(v => v.Version)
-                        .filter(v => v !== '$LATEST')
-                        .reverse()[0];
-                });
+                        .reverse()[0]);
         }
     };
     return client;
