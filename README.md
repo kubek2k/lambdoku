@@ -82,7 +82,7 @@ $ lambdoku logs -n 100
 
 To follow logs produced by all lambda invocations:
 ```shell
-$ lambdoku -f 
+$ lambdoku logs -f 
 ```
 
 ### Invoking lambda
