@@ -93,6 +93,11 @@ To invoke lambda to test if it works, you can use:
 lambdoku invoke
 ```
 
+You can also pass parameters to the function invocation:
+```shell
+lambdoku invoke '{"param1": "value1" ... }'
+```
+
 ## Installation
 
 1. _Prerequisite:_ AWS Environment variables
