@@ -70,10 +70,11 @@ const withMessage = function(message, fn, verbose) {
 const AWSLambdaClient = function(lambdaArn, verbose) {
     const lambda = new Lambda({region: process.env.AWS_DEFAULT_REGION});
     const client = {
-        invoke: function(params) {
+        invoke: function(input) {
             return withMessage(`Invoking lambda ${lambdaArn}`, () => 
                     lambda.invoke({
-                        FunctionName: lambdaArn
+                        FunctionName: lambdaArn,
+                        Payload: input
                     }).promise()
                     .then(({ data }) => {
                         return data.Payload;
@@ -428,11 +429,11 @@ commander
     }));
 
 commander
-    .command('invoke')
+    .command('invoke [input]')
     .description('invokes given lambda')
-    .action(handle(() => {
+    .action(handle((input) => {
         const commandLineLambda = createCommandLineLambda(commander);
-        return commandLineLambda.invoke()
+        return commandLineLambda.invoke(input)
                 .then(res => {
                     console.log(res);
                 });
