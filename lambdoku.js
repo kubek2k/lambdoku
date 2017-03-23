@@ -331,7 +331,7 @@ commander
     .description('lists releases of lambda')
     .action(handle(() => {
         return createCommandLineLambda(commander).getFunctionVersions()
-            .then(versions => {
+            .then(({versions}) => {
                 versions.reverse()
                     .filter(version => {
                         return version.Version !== '$LATEST';
