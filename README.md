@@ -72,7 +72,7 @@ $ lambdoku pipeline:promote
 now `lambdaDev` and `lambdaStage` have the same codebase. 
 `lambdaStage` can be promoted to `lambdaProd` with command `lambdoku downstream:promote -a lambdaStage`.
 
-## Logs
+### Logs
 
 To get 100 latest log lines from all lambda invocations:
 
@@ -83,6 +83,14 @@ $ lambdoku logs -n 100
 To follow logs produced by all lambda invocations:
 ```shell
 $ lambdoku -f 
+```
+
+### Invoking lambda
+
+To invoke lambda to test if it works, you can use:
+
+```shell
+lambdoku invoke
 ```
 
 ## Installation
