@@ -70,6 +70,15 @@ const withMessage = function(message, fn, verbose) {
 const AWSLambdaClient = function(lambdaArn, verbose) {
     const lambda = new Lambda({region: process.env.AWS_DEFAULT_REGION});
     const client = {
+        invoke: function(params) {
+            return withMessage(`Invoking lambda ${lambdaArn}`, () => 
+                    lambda.invoke({
+                        FunctionName: lambdaArn
+                    }).promise()
+                    .then(({ data }) => {
+                        return data.Payload;
+                    }));
+        },
         getFunctionEnvVariables: function(version) {
             return withMessage(`Getting function configuration of ${chalk.blue(lambdaArn)}`,
                 () =>
@@ -416,6 +425,17 @@ commander
         const commandLineLambda = createCommandLineLambda(commander);
         return commandLineLambda.updateFunctionCode(fileName)
             .then(commandLineLambda.publishFunction('New function code version'));
+    }));
+
+commander
+    .command('invoke')
+    .description('invokes given lambda')
+    .action(handle(() => {
+        const commandLineLambda = createCommandLineLambda(commander);
+        return commandLineLambda.invoke()
+                .then(res => {
+                    console.log(res);
+                });
     }));
 
 commander
