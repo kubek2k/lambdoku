@@ -283,7 +283,9 @@ commander
     .description('add downstream to given lambda')
     .action(handle(downstreamLambdaName => {
         const lambda = createCommandLineLambda(commander);
-        return lambda.getFunctionEnvVariables('$LATEST')
+        return AWSLambdaClient(downstreamLambdaName, commander.verbose)
+            .getFunctionEnvVariables('$LATEST')
+            .then(() => lambda.getFunctionEnvVariables('$LATEST'))
             .then(config => {
                 const downstreamLambdas = extractDownstreamFunctions(config);
                 downstreamLambdas.push(downstreamLambdaName);
