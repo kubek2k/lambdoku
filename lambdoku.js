@@ -17,6 +17,7 @@ const handle = function(fn) {
         return fn.apply(undefined, arguments)
             .catch(err => {
                 console.log(chalk.red(err), err.stack);
+                process.exit(1);
             });
     }
 };
