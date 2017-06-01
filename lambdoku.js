@@ -12,6 +12,8 @@ const AWSLogs = require('./logs/logs');
 const lookback = require('./logs/lookback');
 const printLogEvent = require('./logs/printLogEvent');
 
+const DOWNSTREAM_VARIABLE = 'LAMBDOKU_DOWNSTREAM_LAMBDAS';
+
 const handle = function(fn) {
     return function() {
         return fn.apply(undefined, arguments)
@@ -34,7 +36,7 @@ const getLambdaName = function(commander) {
 };
 
 const extractDownstreamFunctions = function(config) {
-    const configStringVal = config['DOWNSTREAM_LAMBDAS'] || '';
+    const configStringVal = config[DOWNSTREAM_VARIABLE] || '';
     return configStringVal.length > 0 ? configStringVal.split(';') : [];
 };
 
@@ -290,7 +292,7 @@ commander
             .then(config => {
                 const downstreamLambdas = extractDownstreamFunctions(config);
                 downstreamLambdas.push(downstreamLambdaName);
-                config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
+                config[DOWNSTREAM_VARIABLE] = downstreamLambdas.join(';');
                 return config;
             })
             .then(config => lambda.setFunctionConfiguration(config))
@@ -307,7 +309,7 @@ commander
             .then(config => {
                 const downstreamLambdas = extractDownstreamFunctions(config);
                 downstreamLambdas.splice(downstreamLambdas.indexOf(downstreamLambdaName), 1);
-                config['DOWNSTREAM_LAMBDAS'] = downstreamLambdas.join(';');
+                config[DOWNSTREAM_VARIABLE] = downstreamLambdas.join(';');
                 return config;
             })
             .then(config => lambda.setFunctionConfiguration(config))
