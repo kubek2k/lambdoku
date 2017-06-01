@@ -105,6 +105,7 @@ lambdoku invoke '{"param1": "value1" ... }'
      * `AWS_ACCESS_KEY_ID`
      * `AWS_SECRET_ACCESS_KEY`
      * `AWS_DEFAULT_REGION`
+   * ... or use the `~/.aws/config` file to configure aws-sdk by setting `AWS_SDK_LOAD_CONFIG` env variable to something truthy
 2. _Prerequisite:_ Node and npm _(ES6 support required)_
    * On OS X with homebrew: `brew update && brew install node`
 3. Then, simply:
