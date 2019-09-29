@@ -34,12 +34,19 @@ module.exports = function(logLine) {
         }
     } else {
         const split = logLine.trim().split('\t');
-        const requestId = split[1];
-        const message = split[2];
-        return {
-            type: 'simple',
-            requestId,
-            message
+        if (split.length > 2) {
+            const requestId = split[1];
+            const message = split[2];
+            return {
+                type: 'simple',
+                requestId,
+                message
+            }
+        } else {
+            return {
+                type: 'error',
+                logLine
+            }
         }
     }
 };

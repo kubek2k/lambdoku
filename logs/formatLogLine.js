@@ -16,9 +16,11 @@ module.exports = function(parsedLogLine) {
         },
         simple: function(line) {
             return line.message.trim();
+        }, 
+        error: function(line) {
+            return line.message.trim();
         }
     };
-
     const formatter = formatters[parsedLogLine.type];
     if (!formatter) {
         throw new Error('Log line type ' + parsedLogLine.type  + ' not supported');
